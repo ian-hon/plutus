@@ -19,7 +19,9 @@ pub enum PlutusFormat {
     Number,     // i32; only numbers 0-9
     BigNumber,  // i64; only numbers 0-9
     // Hex,        // i64; only alphanumerics
-    Key,      // all lowercase, no spaces or special characters
+    Key,        // all lowercase, no spaces or special characters
+
+    FlexibleKey,    // non case-sensitive, no special characters or spaces
 }
 
 pub fn check(c: &HashMap<String, String>, t: Vec<(&str, PlutusFormat)>) -> PlutusError {

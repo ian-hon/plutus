@@ -12,6 +12,7 @@ mod session;
 mod extractor_error;
 
 mod user;
+mod account;
 
 pub async fn not_implemented_yet() -> Response {
     (StatusCode::NOT_IMPLEMENTED, "not implemented yet chill".to_string()).into_response()
@@ -41,7 +42,11 @@ async fn main() {
         .route("/user/login", post(user::login))
         .route("/user/signup", post(user::signup))
 
-        .route("/user/test", get(testing))
+        .route("/account/create", post(account::create))
+        .route("/account/delete", post(account::delete))
+        .route("/account/fetch", post(account::fetch))
+        .route("/account/fetch/all", post(account::fetch_all))
+
 
         .layer(
             CorsLayer::new()

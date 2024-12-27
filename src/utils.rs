@@ -22,14 +22,14 @@ pub async fn request_boiler<F, Fut>(
     query: HashMap<String, String>,
     session_id: RawSessionID,
 
-    hermes_check: Vec<(&str, PlutusFormat)>,
+    plutus_check: Vec<(&str, PlutusFormat)>,
     
     func: F) -> impl IntoResponse
 where F: Fn(Pool<Postgres>, Session, HashMap<String, String>) -> Fut, Fut: Future<Output = String>,
 {
     match session_id.into_session(&app_state.db).await {
         Ok(s) => {
-            match plutus_error::check(&query, hermes_check) {
+            match plutus_error::check(&query, plutus_check) {
                 PlutusError::Success => func(app_state.db, s, query).await.into_response(),
                 r => serde_json::to_string(&r).unwrap().into_response()
             }
@@ -44,14 +44,14 @@ pub async fn request_boiler_whole<F, Fut>(
     query: HashMap<String, String>,
     session_id: RawSessionID,
 
-    hermes_check: Vec<(&str, PlutusFormat)>,
+    plutus_check: Vec<(&str, PlutusFormat)>,
     
     func: F) -> impl IntoResponse
 where F: Fn(AppState, Session, HashMap<String, String>) -> Fut, Fut: Future<Output = String>,
 {
     match session_id.into_session(&app_state.db).await {
         Ok(s) => {
-            match plutus_error::check(&query, hermes_check) {
+            match plutus_error::check(&query, plutus_check) {
                 PlutusError::Success => func(app_state, s, query).await.into_response(),
                 r => serde_json::to_string(&r).unwrap().into_response()
             }
