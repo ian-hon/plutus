@@ -15,7 +15,7 @@ pub struct Account {
     pub id: i64,
     pub name: String,
     pub owner: String,
-    pub balance: f32,
+    pub balance: f64,
 }
 impl Account {
     pub async fn fetch(db: &Pool<Postgres>, id: i64) -> Option<Account> {
@@ -37,7 +37,7 @@ impl Account {
             id: Account::generate_id(db).await,
             name,
             owner,
-            balance: 0f32
+            balance: 0f64
         };
         sqlx::query("insert into plutus.account(id, name, owner, balance) values($1, $2, $3, $4);")
             .bind(candidate.id)

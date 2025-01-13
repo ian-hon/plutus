@@ -16,6 +16,8 @@ pub enum PlutusError {
 pub enum PlutusFormat {
     Unspecified, // anything goes
 
+    Float, // f64
+
     Number,     // i32; only numbers 0-9
     BigNumber,  // i64; only numbers 0-9
     // Hex,        // i64; only alphanumerics
@@ -30,6 +32,11 @@ pub fn check(c: &HashMap<String, String>, t: Vec<(&str, PlutusFormat)>) -> Plutu
         match c.get(&i.0) {
             Some(v) => {
                 match i.1 {
+                    PlutusFormat::Float => {
+                        if v.parse::<f64>().is_err() {
+                            return PlutusError::InvalidFormat;
+                        }
+                    },
                     PlutusFormat::Number => {
                         if v.parse::<i32>().is_err() {
                             return PlutusError::InvalidFormat;

@@ -13,6 +13,7 @@ mod extractor_error;
 
 mod user;
 mod account;
+mod limit;
 
 pub async fn not_implemented_yet() -> Response {
     (StatusCode::NOT_IMPLEMENTED, "not implemented yet chill".to_string()).into_response()
@@ -46,6 +47,11 @@ async fn main() {
         .route("/account/delete", post(account::delete))
         .route("/account/fetch", post(account::fetch))
         .route("/account/fetch/all", post(account::fetch_all))
+
+        .route("/limit/create", post(limit::create))
+        .route("/limit/fetch", post(limit::fetch))
+        .route("/limit/delete", post(limit::delete))
+        .route("/limit/edit", post(limit::edit))
 
 
         .layer(
