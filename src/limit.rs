@@ -5,7 +5,7 @@ use axum_extra::extract::WithRejection;
 use serde::{Deserialize, Serialize};
 use sqlx::{prelude::FromRow, Pool, Postgres, Row};
 
-use crate::{account::{self, Account, AccountError}, extractor_error::ExtractorError, plutus_error::PlutusFormat, session::{self, RawSessionID}, utils, AppState};
+use crate::{account::{Account, AccountError}, extractor_error::ExtractorError, plutus_error::{PlutusFormat, Outcome}, session::RawSessionID, utils, AppState};
 
 #[derive(FromRow, Serialize, Deserialize)]
 pub struct Limit {
@@ -16,7 +16,7 @@ pub struct Limit {
     pub cap: f64,
 
     pub duration: i32,
-    pub last_cycle: f64,
+    pub last_enforcement: i32,
 }
 
 impl Limit {
@@ -32,20 +32,18 @@ impl Limit {
                     usage: 0f64,
                     cap,
                     duration,
-                    last_cycle: utils::get_time() as f64
+                    last_enforcement: utils::get_epoch_day() as i32
                 };
 
-                result.id = sqlx::query("insert into plutus.limit(account, usage, cap, duration, last_cycle) values($1, $2, $3, $4, $5) returning id;")
+                result.id = sqlx::query("insert into plutus.limit(account, usage, cap, duration, last_enforcement) values($1, $2, $3, $4, $5) returning id;")
                     .bind(result.account)
                     .bind(result.usage)
                     .bind(result.cap)
                     .bind(result.duration)
-                    .bind(result.last_cycle)
+                    .bind(result.last_enforcement)
                     .fetch_one(db)
                     .await.unwrap()
                     .get(0);
-
-                println!("created limit : {}", result.id);
 
                 Ok(result)
             }
@@ -108,17 +106,19 @@ pub async fn create(
         let id = utils::from_query("account", &query).parse::<i64>().unwrap();
 
         if !Account::is_owner(&db, id, session.user).await {
-            return serde_json::to_string(&account::AccountError::NoPermission).unwrap();
+            return Outcome::Account(AccountError::NoPermission);
         }
 
-        serde_json::to_string(
-            &Limit::create(
-                &db,
-                id,
-                utils::from_query("cap", &query).parse::<f64>().unwrap(),
-                utils::from_query("duration", &query).parse::<i32>().unwrap()
-            ).await
-        ).unwrap().to_string()
+        match Limit::create(
+            &db,
+            id,
+            utils::from_query("cap", &query).parse::<f64>().unwrap(),
+            utils::from_query("duration", &query).parse::<i32>().unwrap()
+        ).await
+        .map_err(|e| Outcome::Limit(e)) {
+            Ok(l) => Outcome::Success(serde_json::to_string(&l).unwrap()),
+            Err(e) => e
+        }
     }).await
 }
 
@@ -130,12 +130,14 @@ pub async fn fetch(
     utils::request_boiler(app_state, query, session_id, vec![
         ("account", PlutusFormat::BigNumber)
     ], |db, _, query| async move {
-        serde_json::to_string(
-            &Limit::fetch(
-                &db,
-                utils::from_query("account", &query).parse::<i64>().unwrap()
-            ).await
-        ).unwrap()
+        Outcome::Success(
+            serde_json::to_string(
+                &Limit::fetch(
+                    &db,
+                    utils::from_query("account", &query).parse::<i64>().unwrap()
+                ).await
+            ).unwrap()
+        )
     }).await
 }
 
@@ -150,12 +152,12 @@ pub async fn delete(
         let id = utils::from_query("account", &query).parse::<i64>().unwrap();
 
         if !Account::is_owner(&db, id, session.user).await {
-            return serde_json::to_string(&AccountError::NoPermission).unwrap();
+            return Outcome::Account(AccountError::NoPermission);
         }
 
-        serde_json::to_string(
-            &Limit::delete(&db, id).await
-        ).unwrap()
+        Outcome::Limit(
+            Limit::delete(&db, id).await
+        )
     }).await
 }
 
@@ -172,16 +174,16 @@ pub async fn edit(
         let id = utils::from_query("account", &query).parse::<i64>().unwrap();
 
         if !Account::is_owner(&db, id, session.user).await {
-            return serde_json::to_string(&account::AccountError::NoPermission).unwrap();
+            return Outcome::Account(AccountError::NoPermission);
         }
 
-        serde_json::to_string(
-            &Limit::edit(
+        Outcome::Limit(
+            Limit::edit(
                 &db,
                 id,
                 utils::from_query("cap", &query).parse::<f64>().unwrap(),
                 utils::from_query("duration", &query).parse::<i32>().unwrap()
             ).await
-        ).unwrap().to_string()
+        )
     }).await
 }
