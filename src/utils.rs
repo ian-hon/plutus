@@ -1,9 +1,10 @@
 use std::{collections::HashMap, future::Future, time::{SystemTime, UNIX_EPOCH}};
 
 use axum::response::IntoResponse;
+use serde::Serialize;
 use sqlx::{Pool, Postgres};
 
-use crate::{plutus_error::{self, PlutusError, PlutusFormat}, session::{RawSessionID, Session}, AppState};
+use crate::{plutus_error::{self, PlutusError, PlutusFormat, Outcome}, session::{RawSessionID, Session}, AppState};
 
 pub fn get_time() -> i64 {
     // epoch unix, in seconds
@@ -11,6 +12,10 @@ pub fn get_time() -> i64 {
         .duration_since(UNIX_EPOCH)
         .expect("time went backwards (???)")
         .as_secs() as i64
+}
+
+pub fn get_epoch_day() -> i64 {
+    get_time() / 86400
 }
 
 pub fn from_query(k: &str, q: &HashMap<String, String>) -> String {
@@ -25,16 +30,18 @@ pub async fn request_boiler<F, Fut>(
     plutus_check: Vec<(&str, PlutusFormat)>,
     
     func: F) -> impl IntoResponse
-where F: Fn(Pool<Postgres>, Session, HashMap<String, String>) -> Fut, Fut: Future<Output = String>,
+where
+    F: Fn(Pool<Postgres>, Session, HashMap<String, String>) -> Fut,
+    Fut: Future<Output = Outcome>,
 {
     match session_id.into_session(&app_state.db).await {
         Ok(s) => {
             match plutus_error::check(&query, plutus_check) {
-                PlutusError::Success => func(app_state.db, s, query).await.into_response(),
-                r => serde_json::to_string(&r).unwrap().into_response()
+                PlutusError::Success => serde_json::to_string(&func(app_state.db, s, query).await).unwrap().into_response(),
+                r => serde_json::to_string(&Outcome::Plutus(r)).unwrap().into_response()
             }
         },
-        Err(e) => serde_json::to_string(&e).unwrap().into_response()
+        Err(e) => serde_json::to_string(&Outcome::Session(e)).unwrap().into_response()
     }
 }
 
@@ -47,16 +54,18 @@ pub async fn request_boiler_whole<F, Fut>(
     plutus_check: Vec<(&str, PlutusFormat)>,
     
     func: F) -> impl IntoResponse
-where F: Fn(AppState, Session, HashMap<String, String>) -> Fut, Fut: Future<Output = String>,
+where
+    F: Fn(AppState, Session, HashMap<String, String>) -> Fut,
+    Fut: Future<Output = Outcome>,
 {
     match session_id.into_session(&app_state.db).await {
         Ok(s) => {
             match plutus_error::check(&query, plutus_check) {
-                PlutusError::Success => func(app_state, s, query).await.into_response(),
-                r => serde_json::to_string(&r).unwrap().into_response()
+                PlutusError::Success => serde_json::to_string(&func(app_state, s, query).await).unwrap().into_response(),
+                r => serde_json::to_string(&Outcome::Plutus(r)).unwrap().into_response()
             }
         },
-        Err(e) => serde_json::to_string(&e).unwrap().into_response()
+        Err(e) => serde_json::to_string(&Outcome::Session(e)).unwrap().into_response()
     }
 }
 

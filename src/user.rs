@@ -12,9 +12,9 @@ pub struct User {
     password: String
 }
 impl User {
-    pub async fn login(db: &Pool<Postgres>, username: String, password: String) -> AccountResult {
+    pub async fn login(db: &Pool<Postgres>, username: String, password: String) -> UserError {
         if !User::username_existance(db, &username).await {
-            return AccountResult::UsernameNoExist;
+            return UserError::UsernameNoExist;
         }
 
         if sqlx::query("select count(*) from plutus.user where plutus.user.username = $1 and plutus.user.password = $2;")
@@ -23,10 +23,10 @@ impl User {
             .fetch_one(db)
             .await
             .unwrap().get::<i64, usize>(0) < 1 {
-            return AccountResult::PasswordWrong
+            return UserError::PasswordWrong
         }
 
-        AccountResult::Success(session::Session::get_session_id(db, username).await)
+        UserError::Success(session::Session::get_session_id(db, username).await)
     }
 
     pub async fn username_existance(db: &Pool<Postgres>, username: &String) -> bool {
@@ -37,9 +37,9 @@ impl User {
             .unwrap().get::<i64, usize>(0) >= 1
     }
 
-    pub async fn signup(db: &Pool<Postgres>, username: String, password: String) -> AccountResult {
+    pub async fn signup(db: &Pool<Postgres>, username: String, password: String) -> UserError {
         if User::username_existance(db, &username).await {
-            return AccountResult::UsernameExist;
+            return UserError::UsernameExist;
         }
 
         sqlx::query("insert into plutus.user(username, password) values($1, $2);")
@@ -48,12 +48,12 @@ impl User {
             .execute(db)
             .await.unwrap();
 
-        AccountResult::Success(session::Session::get_session_id(db, username).await)
+        UserError::Success(session::Session::get_session_id(db, username).await)
     }
 }
 
 #[derive(Display, Serialize, Deserialize)]
-pub enum AccountResult {
+pub enum UserError {
     Success(String),
 
     // login

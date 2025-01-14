@@ -6,7 +6,7 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sqlx::{prelude::FromRow, Pool, Postgres, Row};
 
-use crate::{extractor_error::ExtractorError, plutus_error::{PlutusError, PlutusFormat}, session::RawSessionID, utils, AppState};
+use crate::{extractor_error::ExtractorError, plutus_error::{PlutusError, PlutusFormat, Outcome}, session::RawSessionID, utils, AppState};
 
 const ID_LENGTH: u32 = 64;
 
@@ -106,7 +106,7 @@ pub async fn create(
     ], |db, session, query| async move {
         Account::create(&db, utils::from_query("name", &query), session.user).await;
 
-        serde_json::to_string(&AccountError::Success).unwrap()
+        Outcome::Account(AccountError::Success)
     }).await
 }
 
@@ -118,18 +118,20 @@ pub async fn fetch(
     utils::request_boiler(app_state, query, session_id, vec![
         ("id", PlutusFormat::Number)
     ], |db, session, query| async move {
-        serde_json::to_string(
-            &match Account::fetch(&db, utils::from_query("id", &query).parse::<i64>().unwrap()).await {
-                Some(a) => {
-                    if a.owner == session.user {
-                        Some(a)
-                    } else {
-                        None
-                    }
-                },
-                None => None
-            }
-        ).unwrap()
+        Outcome::Success(
+            serde_json::to_string(
+                &match Account::fetch(&db, utils::from_query("id", &query).parse::<i64>().unwrap()).await {
+                    Some(a) => {
+                        if a.owner == session.user {
+                            Some(a)
+                        } else {
+                            None
+                        }
+                    },
+                    None => None
+                }
+            ).unwrap()
+        )
     }).await
 }
 
@@ -139,7 +141,7 @@ pub async fn fetch_all(
     WithRejection(Json(session_id), _): WithRejection<Json<RawSessionID>, ExtractorError>
 ) -> impl IntoResponse {
     utils::request_boiler(app_state, query, session_id, vec![], |db, session, _| async move {
-        serde_json::to_string(&Account::fetch_all(&db, session.user).await).unwrap()
+        Outcome::Success(serde_json::to_string(&Account::fetch_all(&db, session.user).await).unwrap())
     }).await
 }
 
@@ -152,13 +154,10 @@ pub async fn delete(
         ("id", PlutusFormat::Number)
     ], |db, session, query| async move {
         let id = utils::from_query("id", &query).parse::<i64>().unwrap();
-        serde_json::to_string(
-            // this syntax so funny lmao
-            &if Account::is_owner(&db, id, session.user.clone()).await {
-                Account::delete(&db, utils::from_query("id", &query).parse::<i64>().unwrap()).await
-            } else {
-                AccountError::NoPermission
-            }
-        ).unwrap()
+        if Account::is_owner(&db, id, session.user.clone()).await {
+            Outcome::Account(Account::delete(&db, id).await)
+        } else {
+            Outcome::Account(AccountError::NoPermission)
+        }
     }).await
 }

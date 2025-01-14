@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
+use crate::{account::AccountError, limit::LimitError, session::SessionError, transfer::TransferError, user::UserError};
+
 #[derive(Debug, Serialize, Deserialize)]
 pub enum PlutusError {
     Success,
@@ -11,6 +13,19 @@ pub enum PlutusError {
 
     // expected "name" not to have any special characters
     InvalidFormat, 
+}
+
+#[derive(Serialize, Deserialize)]
+pub enum Outcome
+{
+    Success(String),
+    Account(AccountError),
+    Limit(LimitError),
+    Session(SessionError),
+    Transfer(TransferError),
+    User(UserError),
+
+    Plutus(PlutusError)
 }
 
 pub enum PlutusFormat {
