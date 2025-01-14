@@ -57,9 +57,9 @@ impl Limit {
             .await.unwrap()
     }
 
-    pub async fn delete(db: &Pool<Postgres>, account: i64) -> LimitError {
+    pub async fn delete(db: &Pool<Postgres>, account: i64) -> Option<LimitError> {
         if Limit::fetch(db, account).await.is_none() {
-            return LimitError::LimitDoesntExist;
+            return Some(LimitError::LimitDoesntExist);
         }
 
         sqlx::query("delete from plutus.limit where account = $1;")
@@ -67,12 +67,12 @@ impl Limit {
             .execute(db)
             .await.unwrap();
 
-        LimitError::Success
+        None
     }
 
-    pub async fn edit(db: &Pool<Postgres>, account: i64, cap: f64, duration: i32) -> LimitError {
+    pub async fn edit(db: &Pool<Postgres>, account: i64, cap: f64, duration: i32) -> Option<LimitError> {
         if Limit::fetch(db, account).await.is_none() {
-            return LimitError::LimitDoesntExist;
+            return Some(LimitError::LimitDoesntExist);
         }
 
         sqlx::query("update plutus.limit set cap = $1, duration = $2;")
@@ -81,14 +81,12 @@ impl Limit {
             .execute(db)
             .await.unwrap();
 
-        LimitError::Success
+        None
     }
 }
 
 #[derive(Serialize, Deserialize)]
 pub enum LimitError {
-    Success,
-
     LimitAlreadyExists,
     LimitDoesntExist,
 }
@@ -116,7 +114,7 @@ pub async fn create(
             utils::from_query("duration", &query).parse::<i32>().unwrap()
         ).await
         .map_err(|e| Outcome::Limit(e)) {
-            Ok(l) => Outcome::Success(serde_json::to_string(&l).unwrap()),
+            Ok(l) => Outcome::Data(serde_json::to_string(&l).unwrap()),
             Err(e) => e
         }
     }).await
@@ -130,7 +128,7 @@ pub async fn fetch(
     utils::request_boiler(app_state, query, session_id, vec![
         ("account", PlutusFormat::BigNumber)
     ], |db, _, query| async move {
-        Outcome::Success(
+        Outcome::Data(
             serde_json::to_string(
                 &Limit::fetch(
                     &db,
@@ -155,9 +153,10 @@ pub async fn delete(
             return Outcome::Account(AccountError::NoPermission);
         }
 
-        Outcome::Limit(
-            Limit::delete(&db, id).await
-        )
+        match Limit::delete(&db, id).await {
+            Some(e) => Outcome::Limit(e),
+            None => Outcome::Success
+        }
     }).await
 }
 
@@ -177,13 +176,14 @@ pub async fn edit(
             return Outcome::Account(AccountError::NoPermission);
         }
 
-        Outcome::Limit(
-            Limit::edit(
-                &db,
-                id,
-                utils::from_query("cap", &query).parse::<f64>().unwrap(),
-                utils::from_query("duration", &query).parse::<i32>().unwrap()
-            ).await
-        )
+        match Limit::edit(
+            &db,
+            id,
+            utils::from_query("cap", &query).parse::<f64>().unwrap(),
+            utils::from_query("duration", &query).parse::<i32>().unwrap()
+        ).await {
+            Some(e) => Outcome::Limit(e),
+            None => Outcome::Success
+        }
     }).await
 }

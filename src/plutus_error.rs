@@ -18,7 +18,8 @@ pub enum PlutusError {
 #[derive(Serialize, Deserialize)]
 pub enum Outcome
 {
-    Success(String),
+    Success,
+    Data(String),
     Account(AccountError),
     Limit(LimitError),
     Session(SessionError),

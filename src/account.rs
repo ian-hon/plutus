@@ -49,9 +49,11 @@ impl Account {
         candidate
     }
 
-    pub async fn delete(db: &Pool<Postgres>, id: i64) -> AccountError {
+    pub async fn delete(db: &Pool<Postgres>, id: i64) -> Option<AccountError> {
+        // none -> no error
+        // some -> with error (obv)
         if Account::fetch(db, id).await.is_none() {
-            return AccountError::NoExist;
+            return Some(AccountError::NoExist);
         }
 
         sqlx::query("delete from plutus.account where id = $1;")
@@ -59,7 +61,7 @@ impl Account {
             .execute(db)
             .await.unwrap();
 
-        AccountError::Success
+        None
     }
     
     pub async fn generate_id(db: &Pool<Postgres>) -> i64 {
@@ -90,8 +92,6 @@ impl Account {
 
 #[derive(Serialize, Deserialize)]
 pub enum AccountError {
-    Success,
-
     NoExist,
     NoPermission,
 }
@@ -106,7 +106,7 @@ pub async fn create(
     ], |db, session, query| async move {
         Account::create(&db, utils::from_query("name", &query), session.user).await;
 
-        Outcome::Account(AccountError::Success)
+        Outcome::Success
     }).await
 }
 
@@ -118,7 +118,7 @@ pub async fn fetch(
     utils::request_boiler(app_state, query, session_id, vec![
         ("id", PlutusFormat::Number)
     ], |db, session, query| async move {
-        Outcome::Success(
+        Outcome::Data(
             serde_json::to_string(
                 &match Account::fetch(&db, utils::from_query("id", &query).parse::<i64>().unwrap()).await {
                     Some(a) => {
@@ -141,7 +141,7 @@ pub async fn fetch_all(
     WithRejection(Json(session_id), _): WithRejection<Json<RawSessionID>, ExtractorError>
 ) -> impl IntoResponse {
     utils::request_boiler(app_state, query, session_id, vec![], |db, session, _| async move {
-        Outcome::Success(serde_json::to_string(&Account::fetch_all(&db, session.user).await).unwrap())
+        Outcome::Data(serde_json::to_string(&Account::fetch_all(&db, session.user).await).unwrap())
     }).await
 }
 
@@ -155,7 +155,10 @@ pub async fn delete(
     ], |db, session, query| async move {
         let id = utils::from_query("id", &query).parse::<i64>().unwrap();
         if Account::is_owner(&db, id, session.user.clone()).await {
-            Outcome::Account(Account::delete(&db, id).await)
+            match Account::delete(&db, id).await {
+                Some(r) => Outcome::Account(r),
+                None => Outcome::Success
+            }
         } else {
             Outcome::Account(AccountError::NoPermission)
         }
