@@ -20,6 +20,12 @@ pub struct Limit {
 }
 
 impl Limit {
+    // tasks
+    pub async fn increment_limits(db: &Pool<Postgres>) {
+        // run once per day
+    }
+    //
+
     pub async fn create(db: &Pool<Postgres>, account: i64, cap: f64, duration: i32) -> Result<Limit, LimitError> {
         // dont limit creation?
         // multiple limits per account?

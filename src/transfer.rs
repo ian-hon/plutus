@@ -5,7 +5,7 @@ use axum_extra::extract::WithRejection;
 use serde::{Deserialize, Serialize};
 use sqlx::{prelude::FromRow, Pool, Postgres};
 
-use crate::{account::{Account, AccountError}, extractor_error::ExtractorError, limit::LimitError, plutus_error::{PlutusFormat, Outcome}, session::RawSessionID, utils, AppState};
+use crate::{account::{Account, AccountError}, extractor_error::ExtractorError, plutus_error::{PlutusFormat, Outcome}, session::RawSessionID, utils, AppState};
 
 #[derive(FromRow, Serialize, Deserialize)]
 pub struct Transfer {
@@ -17,6 +17,14 @@ pub struct Transfer {
     pub last_transfer: i32 // previous transfer (in epoch days)
 }
 impl Transfer {
+    // tasks
+    pub async fn increment_transfers(db: &Pool<Postgres>) {
+        // run once per day
+        
+    }
+    // 
+
+
     pub async fn create(db: &Pool<Postgres>, origin: i64, destination: i64, amount: f64, duration: i32) {
         sqlx::query("insert into plutus.transfer(origin, destination, amount, duration, last_transfer) values ($1, $2, $3, $4, $5);")
             .bind(origin)
