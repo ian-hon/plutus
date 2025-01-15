@@ -10,17 +10,17 @@ use crate::{account::{Account, AccountError}, extractor_error::ExtractorError, l
 #[derive(FromRow, Serialize, Deserialize)]
 pub struct Transfer {
     pub id: i64,
-    pub from: i64,
-    pub to: i64,
+    pub origin: i64,
+    pub destination: i64,
     pub amount: f64,
-    pub duration: i32, // number of days
-    pub last_transfer: i32 // previous transfer (in epoch day)
+    pub duration: i32, // how often to transfer (every x number of days)
+    pub last_transfer: i32 // previous transfer (in epoch days)
 }
 impl Transfer {
-    pub async fn create(db: &Pool<Postgres>, from: i64, to: i64, amount: f64, duration: i32) {
-        sqlx::query("insert into plutus.transfer(from, to, amount, duration, last_transfer) values ($1, $2, $3, $4, $5);")
-            .bind(from)
-            .bind(to)
+    pub async fn create(db: &Pool<Postgres>, origin: i64, destination: i64, amount: f64, duration: i32) {
+        sqlx::query("insert into plutus.transfer(origin, destination, amount, duration, last_transfer) values ($1, $2, $3, $4, $5);")
+            .bind(origin)
+            .bind(destination)
             .bind(amount)
             .bind(duration)
             .bind(utils::get_epoch_day())
@@ -37,16 +37,16 @@ impl Transfer {
             .await.unwrap();
     }
 
-    pub async fn fetch_incoming(db: &Pool<Postgres>, to: i64) -> Vec<Transfer> {
-        sqlx::query_as::<_, Transfer>("select * from plutus.transfer where to = $1;")
-            .bind(to)
+    pub async fn fetch_incoming(db: &Pool<Postgres>, destination: i64) -> Vec<Transfer> {
+        sqlx::query_as::<_, Transfer>("select * from plutus.transfer where destination = $1;")
+            .bind(destination)
             .fetch_all(db)
             .await.unwrap()
     }
 
-    pub async fn fetch_outgoing(db: &Pool<Postgres>, from: i64) -> Vec<Transfer> {
-        sqlx::query_as::<_, Transfer>("select * from plutus.transfer where from = $1;")
-            .bind(from)
+    pub async fn fetch_outgoing(db: &Pool<Postgres>, origin: i64) -> Vec<Transfer> {
+        sqlx::query_as::<_, Transfer>("select * from plutus.transfer where origin = $1;")
+            .bind(origin)
             .fetch_all(db)
             .await.unwrap()
     }
@@ -79,6 +79,8 @@ pub enum TransferError {
     ToDoesntExist,
     FromDoesntExist,
 
+    TargetSame, // when to and from are the same
+
     InsufficientBalance
 }
 
@@ -88,30 +90,34 @@ pub async fn create(
     WithRejection(Json(session_id), _): WithRejection<Json<RawSessionID>, ExtractorError>
 ) -> impl IntoResponse {
     utils::request_boiler(app_state, query, session_id, vec![
-        ("from", PlutusFormat::BigNumber),
-        ("to", PlutusFormat::BigNumber),
+        ("origin", PlutusFormat::BigNumber),
+        ("destination", PlutusFormat::BigNumber),
         ("amount", PlutusFormat::Float),
         ("duration", PlutusFormat::BigNumber),
     ], |db, session, query| async move {
         // check existance of both from and to
 
-        let to = utils::from_query("to", &query).parse::<i64>().unwrap();
-        let from = utils::from_query("from", &query).parse::<i64>().unwrap();
+        let destination = utils::from_query("destination", &query).parse::<i64>().unwrap();
+        let origin = utils::from_query("origin", &query).parse::<i64>().unwrap();
 
-        if !Account::is_owner(&db, from, session.user).await {
-            // owns 'from'
+        if !Account::is_owner(&db, origin, session.user).await {
+            // owns origin
             return Outcome::Account(AccountError::NoPermission);
         }
 
-        if Account::fetch(&db, to).await.is_none() {
-            // 'to' exists
+        if Account::fetch(&db, destination).await.is_none() {
+            // destination exists
             return Outcome::Transfer(TransferError::ToDoesntExist);
+        }
+
+        if destination == origin {
+            return Outcome::Transfer(TransferError::TargetSame);
         }
 
         Transfer::create(
             &db,
-            from,
-            to,
+            origin,
+            destination,
             utils::from_query("amount", &query).parse::<f64>().unwrap(),
             utils::from_query("duration", &query).parse::<i32>().unwrap(),
         ).await;
@@ -138,7 +144,7 @@ pub async fn edit(
         }
         let transfer = transfer.unwrap();
 
-        if !Account::is_owner(&db, transfer.from, session.user).await {
+        if !Account::is_owner(&db, transfer.origin, session.user).await {
             return Outcome::Account(AccountError::NoPermission);
         }
 
