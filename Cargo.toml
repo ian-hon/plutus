@@ -22,6 +22,7 @@ thiserror = "2.0.3"
 
 rand = "0.8.4"
 rand_distr = "0.4.3"
+sha256 = "1.5.0"
 
 urlencoding = "2.1.3"
 

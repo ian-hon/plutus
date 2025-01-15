@@ -45,6 +45,7 @@ async fn main() {
         .route("/user/signup", post(user::signup))
 
         .route("/account/create", post(account::create))
+        .route("/account/edit", post(account::edit))
         .route("/account/delete", post(account::delete))
         .route("/account/fetch", post(account::fetch))
         .route("/account/fetch/all", post(account::fetch_all))
@@ -59,7 +60,6 @@ async fn main() {
         .route("/transfer/fetch/incoming", post(transfer::fetch_incoming))
         .route("/transfer/fetch/outgoing", post(transfer::fetch_outgoing))
         .route("/transfer/delete", post(transfer::delete))
-
 
         .layer(
             CorsLayer::new()

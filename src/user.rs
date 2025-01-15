@@ -1,6 +1,7 @@
 use axum::{extract::State, response::IntoResponse, Json};
 use axum_extra::extract::WithRejection;
 use serde::{Deserialize, Serialize};
+use sha256::digest;
 use sqlx::{prelude::FromRow, Pool, Postgres, Row};
 use strum_macros::Display;
 
@@ -19,7 +20,7 @@ impl User {
 
         if sqlx::query("select count(*) from plutus.user where plutus.user.username = $1 and plutus.user.password = $2;")
             .bind(username.clone())
-            .bind(password)
+            .bind(digest(password))
             .fetch_one(db)
             .await
             .unwrap().get::<i64, usize>(0) < 1 {
@@ -44,7 +45,7 @@ impl User {
 
         sqlx::query("insert into plutus.user(username, password) values($1, $2);")
             .bind(username.clone())
-            .bind(password)
+            .bind(digest(password))
             .execute(db)
             .await.unwrap();
 
