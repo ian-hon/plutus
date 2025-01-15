@@ -6,9 +6,9 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sqlx::{prelude::FromRow, Pool, Postgres, Row};
 
-use crate::{extractor_error::ExtractorError, plutus_error::{PlutusError, PlutusFormat, Outcome}, session::RawSessionID, utils, AppState};
+use crate::{extractor_error::ExtractorError, plutus_error::{PlutusFormat, Outcome}, session::RawSessionID, utils, AppState};
 
-const ID_LENGTH: u32 = 64;
+const ID_LENGTH: u32 = 4 * 2;
 
 #[derive(FromRow, Serialize, Deserialize)]
 pub struct Account {
@@ -49,6 +49,20 @@ impl Account {
         candidate
     }
 
+    pub async fn edit(db: &Pool<Postgres>, id: i64, name: String) -> Option<AccountError> {
+        if Account::fetch(db, id).await.is_none() {
+            return Some(AccountError::NoExist);
+        }
+
+        sqlx::query("update plutus.account set name = $1 where id = $2;")
+            .bind(name)
+            .bind(id)
+            .execute(db)
+            .await.unwrap();
+
+        None
+    }
+
     pub async fn delete(db: &Pool<Postgres>, id: i64) -> Option<AccountError> {
         // none -> no error
         // some -> with error (obv)
@@ -70,7 +84,7 @@ impl Account {
 
         let mut rng = rand::thread_rng();
         loop {
-            let candidate = rng.gen_range(0..=(2i64.pow(ID_LENGTH)));
+            let candidate = rng.gen_range(0..=(16i64.pow(ID_LENGTH)));
 
             if ids.contains(&candidate) {
                 continue;
@@ -90,7 +104,7 @@ impl Account {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub enum AccountError {
     NoExist,
     NoPermission,
@@ -110,13 +124,34 @@ pub async fn create(
     }).await
 }
 
+pub async fn edit(
+    State(app_state): State<AppState>,
+    Query(query): Query<HashMap<String, String>>,
+    WithRejection(Json(session_id), _): WithRejection<Json<RawSessionID>, ExtractorError>
+) -> impl IntoResponse {
+    utils::request_boiler(app_state, query, session_id, vec![
+        ("id", PlutusFormat::BigNumber),
+        ("name", PlutusFormat::Unspecified)
+    ], |db, session, query| async move {
+        let id = utils::from_query("id", &query).parse::<i64>().unwrap();
+        if !Account::is_owner(&db, id, session.user).await {
+            return Outcome::Account(AccountError::NoPermission);
+        }
+
+        match Account::edit(&db, id, utils::from_query("name", &query)).await {
+            Some(e) => Outcome::Account(if e == AccountError::NoExist { AccountError::NoPermission } else { e }),
+            None => Outcome::Success
+        }
+    }).await
+}
+
 pub async fn fetch(
     State(app_state): State<AppState>,
     Query(query): Query<HashMap<String, String>>,
     WithRejection(Json(session_id), _): WithRejection<Json<RawSessionID>, ExtractorError>
 ) -> impl IntoResponse {
     utils::request_boiler(app_state, query, session_id, vec![
-        ("id", PlutusFormat::Number)
+        ("id", PlutusFormat::BigNumber)
     ], |db, session, query| async move {
         Outcome::Data(
             serde_json::to_string(
@@ -151,7 +186,7 @@ pub async fn delete(
     WithRejection(Json(session_id), _): WithRejection<Json<RawSessionID>, ExtractorError>
 ) -> impl IntoResponse {
     utils::request_boiler(app_state, query, session_id, vec![
-        ("id", PlutusFormat::Number)
+        ("id", PlutusFormat::BigNumber)
     ], |db, session, query| async move {
         let id = utils::from_query("id", &query).parse::<i64>().unwrap();
         if Account::is_owner(&db, id, session.user.clone()).await {
