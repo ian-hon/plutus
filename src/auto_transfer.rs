@@ -35,6 +35,13 @@ impl AutoTransfer {
                     Log::append(db, LogSpecies::Outgoing, Source::AutoTransfer(t.origin), Source::AutoTransfer(t.destination), e).await;
                 }
             }
+
+            // TODO : consider if should still reset last transfer if fail?
+            sqlx::query("update plutus.auto_transfer set last_transfer = $1 where id = $2;")
+                .bind(utils::get_epoch_day())
+                .bind(t.id)
+                .execute(db)
+                .await.unwrap();
         }
     }
     // 

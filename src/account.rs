@@ -137,6 +137,17 @@ impl Account {
             .execute(db)
             .await.unwrap();
 
+        match Limit::fetch(db, origin.id).await {
+            Some(l) => {
+                sqlx::query("update plutus.limit set usage = usage + $1 where id = $2;")
+                    .bind(amount)
+                    .bind(l.id)
+                    .execute(db)
+                    .await.unwrap();
+            },
+            None => {}
+        }
+
         None
     }
     // 
