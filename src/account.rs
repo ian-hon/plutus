@@ -6,7 +6,7 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sqlx::{prelude::FromRow, Pool, Postgres, Row};
 
-use crate::{extractor_error::ExtractorError, plutus_error::{PlutusFormat, Outcome}, session::RawSessionID, utils, AppState};
+use crate::{extractor_error::ExtractorError, limit::{self, Limit, LimitError}, plutus_error::{Outcome, PlutusFormat}, session::RawSessionID, utils, AppState};
 
 const ID_LENGTH: u32 = 4 * 2;
 
@@ -102,12 +102,52 @@ impl Account {
             None => false
         }
     }
+
+    // balance related
+    pub async fn transfer(db: &Pool<Postgres>, origin: i64, destination: i64, amount: f64) -> Option<Outcome> {
+        let origin = Account::fetch(db, origin).await;
+        if origin.is_none() {
+            return Some(Outcome::Account(AccountError::NoExist));
+        }
+        let origin = origin.unwrap();
+
+        let destination = Account::fetch(db, destination).await;
+        if destination.is_none() {
+            return Some(Outcome::Account(AccountError::NoExist));
+        }
+        let destination = destination.unwrap();
+
+        if origin.balance < amount {
+            return Some(Outcome::Account(AccountError::InsufficientBalance));
+        }
+
+        if Limit::check_limits(db, origin.id, amount).await {
+            return Some(Outcome::Limit(LimitError::WillSurpassLimit));
+        }
+
+        sqlx::query("update plutus.account set balance = balance - $1 where id = $2;")
+            .bind(amount)
+            .bind(origin.id)
+            .execute(db)
+            .await.unwrap();
+
+        sqlx::query("update plutus.account set balance = balance + $1 where id = $2;")
+            .bind(amount)
+            .bind(destination.id)
+            .execute(db)
+            .await.unwrap();
+
+        None
+    }
+    // 
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub enum AccountError {
     NoExist,
     NoPermission,
+
+    InsufficientBalance,
 }
 
 pub async fn create(

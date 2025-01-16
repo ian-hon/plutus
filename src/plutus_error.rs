@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{account::AccountError, limit::LimitError, session::SessionError, transfer::TransferError, user::UserError};
+use crate::{account::AccountError, limit::LimitError, session::SessionError, auto_transfer::AutoTransferError, user::UserError};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum PlutusError {
@@ -23,7 +23,7 @@ pub enum Outcome
     Account(AccountError),
     Limit(LimitError),
     Session(SessionError),
-    Transfer(TransferError),
+    AutoTransfer(AutoTransferError),
     User(UserError),
 
     Plutus(PlutusError)

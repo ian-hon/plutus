@@ -1,9 +1,9 @@
 use std::{env, net::SocketAddr, time::Duration};
 
-use axum::{extract::{FromRef, State}, http::StatusCode, response::{IntoResponse, Response}, routing::{get, post}, Router};
+use axum::{extract::FromRef, http::StatusCode, response::{IntoResponse, Response}, routing::{get, post}, Router};
 use dotenv::dotenv;
 use tower_http::cors::{Any, CorsLayer};
-use sqlx::{postgres::{PgPoolOptions, PgRow}, PgPool, Pool, Postgres, Row};
+use sqlx::{PgPool, Pool, Postgres, Row};
 
 mod plutus_error;
 mod utils;
@@ -13,7 +13,8 @@ mod extractor_error;
 mod user;
 mod account;
 mod limit;
-mod transfer;
+mod auto_transfer;
+mod log;
 
 pub async fn not_implemented_yet() -> Response {
     (StatusCode::NOT_IMPLEMENTED, "not implemented yet chill".to_string()).into_response()
@@ -42,7 +43,7 @@ pub async fn increment_tasks(db: &Pool<Postgres>) {
                 .await.unwrap();
 
             limit::Limit::increment_limits(db).await;
-            transfer::Transfer::increment_transfers(db).await;
+            auto_transfer::AutoTransfer::increment_auto_transfers(db).await;
         }
 
         // wait every 20 mins
@@ -81,11 +82,11 @@ async fn main() {
         .route("/limit/delete", post(limit::delete))
         .route("/limit/edit", post(limit::edit))
 
-        .route("/transfer/create", post(transfer::create))
-        .route("/transfer/edit", post(transfer::edit))
-        .route("/transfer/fetch/incoming", post(transfer::fetch_incoming))
-        .route("/transfer/fetch/outgoing", post(transfer::fetch_outgoing))
-        .route("/transfer/delete", post(transfer::delete))
+        .route("/transfer/create", post(auto_transfer::create))
+        .route("/transfer/edit", post(auto_transfer::edit))
+        .route("/transfer/fetch/incoming", post(auto_transfer::fetch_incoming))
+        .route("/transfer/fetch/outgoing", post(auto_transfer::fetch_outgoing))
+        .route("/transfer/delete", post(auto_transfer::delete))
 
         .layer(
             CorsLayer::new()

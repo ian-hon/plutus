@@ -23,8 +23,32 @@ impl Limit {
     // tasks
     pub async fn increment_limits(db: &Pool<Postgres>) {
         // run once per day
+        let limits = sqlx::query_as::<_, Limit>("select * from plutus.limit where $1 - last_enforcement >= duration;")
+            .bind(utils::get_epoch_day())
+            .fetch_all(db)
+            .await.unwrap();
+
+        for limit in limits {
+            // use transaction/some multi-query structure?
+            sqlx::query("update plutus.limit set last_enforcement = $1, usage = 0 where id = $2;")
+                .bind(utils::get_epoch_day())
+                .bind(limit.id)
+                .execute(db)
+                .await.unwrap();
+        }
     }
     //
+
+    // account related
+    pub async fn check_limits(db: &Pool<Postgres>, account: i64, amount: f64) -> bool {
+        // check if using this amount surpasses any limits
+
+        match Limit::fetch(db, account).await {
+            Some(l) => (l.usage + amount) > l.cap,
+            None => false
+        }
+    }
+    // 
 
     pub async fn create(db: &Pool<Postgres>, account: i64, cap: f64, duration: i32) -> Result<Limit, LimitError> {
         // dont limit creation?
@@ -95,6 +119,9 @@ impl Limit {
 pub enum LimitError {
     LimitAlreadyExists,
     LimitDoesntExist,
+
+    SurpassedLimit,
+    WillSurpassLimit
 }
 
 pub async fn create(

@@ -5,10 +5,10 @@ use axum_extra::extract::WithRejection;
 use serde::{Deserialize, Serialize};
 use sqlx::{prelude::FromRow, Pool, Postgres};
 
-use crate::{account::{Account, AccountError}, extractor_error::ExtractorError, plutus_error::{PlutusFormat, Outcome}, session::RawSessionID, utils, AppState};
+use crate::{account::{Account, AccountError}, extractor_error::ExtractorError, log::{Log, LogSpecies, Source}, plutus_error::{Outcome, PlutusFormat}, session::RawSessionID, utils, AppState};
 
 #[derive(FromRow, Serialize, Deserialize)]
-pub struct Transfer {
+pub struct AutoTransfer {
     pub id: i64,
     pub origin: i64,
     pub destination: i64,
@@ -16,17 +16,32 @@ pub struct Transfer {
     pub duration: i32, // how often to transfer (every x number of days)
     pub last_transfer: i32 // previous transfer (in epoch days)
 }
-impl Transfer {
+impl AutoTransfer {
     // tasks
-    pub async fn increment_transfers(db: &Pool<Postgres>) {
+    pub async fn increment_auto_transfers(db: &Pool<Postgres>) {
         // run once per day
-        
+        let auto_transfers = sqlx::query_as::<_, AutoTransfer>("select * from plutus.auto_transfer where $1 - last_transfer >= duration;")
+            .bind(utils::get_epoch_day())
+            .fetch_all(db)
+            .await.unwrap();
+
+        for t in auto_transfers {
+            match Account::transfer(db, t.origin, t.destination, t.amount).await {
+                None => {
+                    Log::append(db, LogSpecies::Outgoing, Source::AutoTransfer(t.origin), Source::AutoTransfer(t.destination), Outcome::Success).await;
+                    Log::append(db, LogSpecies::Incoming, Source::AutoTransfer(t.origin), Source::AutoTransfer(t.destination), Outcome::Success).await;
+                },
+                Some(e) => {
+                    Log::append(db, LogSpecies::Outgoing, Source::AutoTransfer(t.origin), Source::AutoTransfer(t.destination), e).await;
+                }
+            }
+        }
     }
     // 
 
 
     pub async fn create(db: &Pool<Postgres>, origin: i64, destination: i64, amount: f64, duration: i32) {
-        sqlx::query("insert into plutus.transfer(origin, destination, amount, duration, last_transfer) values ($1, $2, $3, $4, $5);")
+        sqlx::query("insert into plutus.auto_transfer(origin, destination, amount, duration, last_transfer) values ($1, $2, $3, $4, $5);")
             .bind(origin)
             .bind(destination)
             .bind(amount)
@@ -37,7 +52,7 @@ impl Transfer {
     }
 
     pub async fn edit(db: &Pool<Postgres>, id: i64, amount: f64, duration: i32) {
-        sqlx::query("update plutus.transfer set amount = $1, duration = $2 where id = $3;")
+        sqlx::query("update plutus.auto_transfer set amount = $1, duration = $2 where id = $3;")
             .bind(amount)
             .bind(duration)
             .bind(id)
@@ -45,33 +60,33 @@ impl Transfer {
             .await.unwrap();
     }
 
-    pub async fn fetch_incoming(db: &Pool<Postgres>, destination: i64) -> Vec<Transfer> {
-        sqlx::query_as::<_, Transfer>("select * from plutus.transfer where destination = $1;")
+    pub async fn fetch_incoming(db: &Pool<Postgres>, destination: i64) -> Vec<AutoTransfer> {
+        sqlx::query_as::<_, AutoTransfer>("select * from plutus.auto_transfer where destination = $1;")
             .bind(destination)
             .fetch_all(db)
             .await.unwrap()
     }
 
-    pub async fn fetch_outgoing(db: &Pool<Postgres>, origin: i64) -> Vec<Transfer> {
-        sqlx::query_as::<_, Transfer>("select * from plutus.transfer where origin = $1;")
+    pub async fn fetch_outgoing(db: &Pool<Postgres>, origin: i64) -> Vec<AutoTransfer> {
+        sqlx::query_as::<_, AutoTransfer>("select * from plutus.auto_transfer where origin = $1;")
             .bind(origin)
             .fetch_all(db)
             .await.unwrap()
     }
 
-    pub async fn fetch(db: &Pool<Postgres>, id: i64) -> Option<Transfer> {
-        sqlx::query_as::<_, Transfer>("select * from plutus.transfer where id = $1;")
+    pub async fn fetch(db: &Pool<Postgres>, id: i64) -> Option<AutoTransfer> {
+        sqlx::query_as::<_, AutoTransfer>("select * from plutus.auto_transfer where id = $1;")
             .bind(id)
             .fetch_optional(db)
             .await.unwrap()
     }
 
-    pub async fn delete(db: &Pool<Postgres>, id: i64) -> Option<TransferError> {
-        if Transfer::fetch(db, id).await.is_none() {
-            return Some(TransferError::TransferDoesntExist);
+    pub async fn delete(db: &Pool<Postgres>, id: i64) -> Option<AutoTransferError> {
+        if AutoTransfer::fetch(db, id).await.is_none() {
+            return Some(AutoTransferError::AutoTransferDoesntExist);
         }
 
-        sqlx::query("delete from plutus.transfer where id = $1;")
+        sqlx::query("delete from plutus.auto_transfer where id = $1;")
             .bind(id)
             .execute(db)
             .await.unwrap();
@@ -81,8 +96,8 @@ impl Transfer {
 }
 
 #[derive(Serialize, Deserialize)]
-pub enum TransferError {
-    TransferDoesntExist,
+pub enum AutoTransferError {
+    AutoTransferDoesntExist,
 
     ToDoesntExist,
     FromDoesntExist,
@@ -115,14 +130,14 @@ pub async fn create(
 
         if Account::fetch(&db, destination).await.is_none() {
             // destination exists
-            return Outcome::Transfer(TransferError::ToDoesntExist);
+            return Outcome::AutoTransfer(AutoTransferError::ToDoesntExist);
         }
 
         if destination == origin {
-            return Outcome::Transfer(TransferError::TargetSame);
+            return Outcome::AutoTransfer(AutoTransferError::TargetSame);
         }
 
-        Transfer::create(
+        AutoTransfer::create(
             &db,
             origin,
             destination,
@@ -140,23 +155,23 @@ pub async fn edit(
     WithRejection(Json(session_id), _): WithRejection<Json<RawSessionID>, ExtractorError>
 ) -> impl IntoResponse {
     utils::request_boiler(app_state, query, session_id, vec![
-        ("transfer", PlutusFormat::BigNumber),
+        ("auto_transfer", PlutusFormat::BigNumber),
         ("amount", PlutusFormat::Float),
         ("duration", PlutusFormat::BigNumber),
     ], |db, session, query| async move {
-        let id = utils::from_query("transfer", &query).parse::<i64>().unwrap();
+        let id = utils::from_query("auto_transfer", &query).parse::<i64>().unwrap();
 
-        let transfer = Transfer::fetch(&db, id).await;
-        if transfer.is_none() {
+        let auto_transfer = AutoTransfer::fetch(&db, id).await;
+        if auto_transfer.is_none() {
             return Outcome::Account(AccountError::NoPermission);
         }
-        let transfer = transfer.unwrap();
+        let auto_transfer = auto_transfer.unwrap();
 
-        if !Account::is_owner(&db, transfer.origin, session.user).await {
+        if !Account::is_owner(&db, auto_transfer.origin, session.user).await {
             return Outcome::Account(AccountError::NoPermission);
         }
 
-        Transfer::edit(
+        AutoTransfer::edit(
             &db,
             id,
             utils::from_query("amount", &query).parse::<f64>().unwrap(),
@@ -180,7 +195,7 @@ pub async fn fetch_incoming(
             return Outcome::Account(AccountError::NoPermission);
         }
 
-        Outcome::Data(serde_json::to_string(&Transfer::fetch_incoming(&db, id).await).unwrap())
+        Outcome::Data(serde_json::to_string(&AutoTransfer::fetch_incoming(&db, id).await).unwrap())
     }).await
 }
 
@@ -197,7 +212,7 @@ pub async fn fetch_outgoing(
             return Outcome::Account(AccountError::NoPermission);
         }
 
-        Outcome::Data(serde_json::to_string(&Transfer::fetch_outgoing(&db, id).await).unwrap())
+        Outcome::Data(serde_json::to_string(&AutoTransfer::fetch_outgoing(&db, id).await).unwrap())
     }).await
 }
 
@@ -214,8 +229,8 @@ pub async fn delete(
             return Outcome::Account(AccountError::NoPermission);
         }
 
-        match Transfer::delete(&db, id).await {
-            Some(e) => Outcome::Transfer(e),
+        match AutoTransfer::delete(&db, id).await {
+            Some(e) => Outcome::AutoTransfer(e),
             None => Outcome::Success
         }
     }).await
