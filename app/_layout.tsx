@@ -23,6 +23,8 @@ export default function RootLayout() {
         ['login', require('../assets/images/state_icons/profile.png')]
     ]);
 
+    const pages = ['homepage'];
+
     function NavBar({ state, descriptors, navigation }:{ state:TabNavigationState<ParamListBase>, descriptors:any, navigation:any }) {
         return state.routeNames[state.index] == 'login' ? <></> :
         <BlurView intensity={20} style={{
@@ -48,7 +50,7 @@ export default function RootLayout() {
                 width:'70%',
             }}>
                 {
-                    state.routes.map((r, i) =>
+                    state.routes.filter((n) => pages.includes(n.name)).map((r, i) =>
                         <Pressable key={r.name} style={{
                             display:'flex',
                             justifyContent:'center',
