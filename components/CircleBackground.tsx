@@ -1,77 +1,91 @@
+import { Theme } from "@/constants/theme";
+import { BlurView } from "expo-blur";
 import React, { useEffect } from "react";
 import { Animated, Easing, useAnimatedValue, View } from "react-native";
 
-export default function CircleBackground({ dimensions }: { dimensions: { width:number, height: number } }): React.JSX.Element {
-    function Circle({ i }:{i : number}): React.JSX.Element {
-        let diameter = (Math.random() * 50) + 100;
+function animateHelper(a: Animated.Value, start: number, end: number, duration: number) {
+    Animated.loop(
+        Animated.sequence([
+            Animated.timing(
+                a,
+                {
+                    toValue:end,
+                    duration:duration,
+                    useNativeDriver:false
+                }
+            ),
+            Animated.timing(
+                a,
+                {
+                    toValue:start,
+                    duration:duration,
+                    useNativeDriver:false
+                }
+            ),
+        ])
+    ).start();
+}
 
-        let xStart = (Math.random() * 150) + 100;
-        let yStart = Math.random() * (dimensions.width - diameter);
-        // let opacityStart = Math.random() + 0.5;
-        let opacityStart = 0.8;
+export default function CircleBackground({ dimensions, amount }: { dimensions: { width:number, height: number }, amount: number }): React.JSX.Element {
+    function Circle({ i, xStart, yStart, diameter }:{i : number, xStart: number, yStart: number, diameter: number }): React.JSX.Element {
+        let opacityStart = (Math.random() * 0.3) + 0.7;
 
         const xAnim = useAnimatedValue(xStart);
         const yAnim = useAnimatedValue(yStart);
-        const opacityAnim = useAnimatedValue(opacityStart);
+        const opacityAnim = useAnimatedValue(opacityStart); // needed?
 
         useEffect(() => {
-            Animated.loop(
-                Animated.sequence([
-                    Animated.timing(
-                        xAnim,
-                        {
-                            toValue:(Math.random() * 150) + 100,
-                            duration:(Math.random() * 2000) + 10000,
-                            useNativeDriver:false
-                        }
-                    ),
-                    Animated.timing(
-                        xAnim,
-                        {
-                            toValue:xStart,
-                            duration:(Math.random() * 2000) + 10000,
-                            useNativeDriver:false
-                        }
-                    ),
-                ])
-            ).start();
+            animateHelper(xAnim, xStart, xStart + ((Math.random() - 0.5) * 200), (Math.random() * 2000) + 3000);
+            animateHelper(yAnim, yStart, yStart + ((Math.random() - 0.5) * 100), (Math.random() * 2000) + 3000);
+            animateHelper(opacityAnim, opacityStart, (Math.random() * 0.5) + 0.5, (Math.random() * 1000) + 20000);
+
             // Animated.loop(
-            //     Animated.timing(
-            //         xAnim,
-            //         {
-            //             toValue:(Math.random() * 150) + 100,
-            //             duration:(Math.random() * 1000) + 2000,
-            //             useNativeDriver:false
-            //         }
-            //     )
+            //     Animated.sequence([
+            //         Animated.timing(
+            //             xAnim,
+            //             {
+            //                 toValue:(Math.random() * 150) + 100,
+            //                 duration:(Math.random() * 5000) + 15000,
+            //                 useNativeDriver:false
+            //             }
+            //         ),
+            //         Animated.timing(
+            //             xAnim,
+            //             {
+            //                 toValue:xStart,
+            //                 duration:(Math.random() * 5000) + 15000,
+            //                 useNativeDriver:false
+            //             }
+            //         ),
+            //     ])
             // ).start();
-            Animated.loop(
-                Animated.sequence([
-                    Animated.timing(
-                        yAnim,
-                        {
-                            toValue:Math.random() * (dimensions.width - diameter),
-                            duration:(Math.random() * 2000) + 10000,
-                            useNativeDriver:false
-                        }
-                    ),
-                    Animated.timing(
-                        yAnim,
-                        {
-                            toValue:yStart,
-                            duration:(Math.random() * 2000) + 10000,
-                            useNativeDriver:false
-                        }
-                    )
-                ])
-            ).start();
+            // Animated.loop(
+            //     Animated.sequence([
+            //         Animated.timing(
+            //             yAnim,
+            //             {
+            //                 toValue:Math.random() * (dimensions.width - diameter),
+            //                 duration:(Math.random() * 5000) + 15000,
+            //                 useNativeDriver:false
+            //             }
+            //         ),
+            //         Animated.timing(
+            //             yAnim,
+            //             {
+            //                 toValue:yStart,
+            //                 duration:(Math.random() * 5000) + 15000,
+            //                 useNativeDriver:false
+            //             }
+            //         )
+            //     ])
+            // ).start();
             // Animated.loop(
             //     Animated.sequence([
             //         Animated.timing(
             //             opacityAnim,
             //             {
-            //                 toValue:Math.random(),
-            //                 duration:(Math.random() * 1000) + 2000,
+            //                 toValue:(Math.random() * 0.5) + 0.5,
+            //                 duration:(Math.random() * 1000) + 20000,
             //                 useNativeDriver:false
             //             }
             //         ),
@@ -79,7 +93,7 @@ export default function CircleBackground({ dimensions }: { dimensions: { width:n
             //             opacityAnim,
             //             {
             //                 toValue:opacityStart,
-            //                 duration:(Math.random() * 1000) + 2000,
+            //                 duration:(Math.random() * 1000) + 20000,
             //                 useNativeDriver:false
             //             }
             //         )
@@ -89,22 +103,29 @@ export default function CircleBackground({ dimensions }: { dimensions: { width:n
 
         return <Animated.View key={i} style={{
             position:'absolute',
-            // marginTop:(Math.random() * 150) + 100,
-            marginTop:xAnim,
-            marginLeft:yAnim,
-            // left:Math.random() * (dimensions.width - diameter),
-            backgroundColor:`${colors[Math.round(Math.random() * colors.length)]}aa`,
+            marginTop:yAnim,
+            marginLeft:xAnim,
+            backgroundColor:`${colors[Math.round(Math.random() * (colors.length - 1))]}`,
             height:diameter,
             width:diameter,
             borderRadius:1000,
-            opacity: opacityAnim
+            opacity: opacityAnim,
         }}/>
     }
 
     let result = Array<React.JSX.Element>();
     let colors = Array('#211951', '#836FFF', '#15F5BA', '#48CFCB');
-    for (let i = 0; i < 3; i++) {
-        result.push(<Circle i={i}/>);
+    // let colors = Array(Theme.accent);
+    let previous = Math.random();
+    for (let i = 0; i < amount; i++) {
+        let diameter = (Math.random() * 50) + 100;
+        let a =  (((Math.random() - 0.5) * 0.2) + 0.6) * Math.PI;
+        let d = (Math.random() * 30) + 80;
+        let x = (Math.cos(a + previous) * d) + ((dimensions.width / 2) - (diameter / 2));
+        let y = (Math.sin(a + previous) * d) + ((dimensions.height / 2) - (diameter / 2));
+        previous += a;
+
+        result.push(<Circle i={i} xStart={x} yStart={y} diameter={diameter} />);
     }
 
     return <>

@@ -1,6 +1,6 @@
 export const Theme = {
     text: "#fff",
-    textTranslucent: "#888",
+    textTranslucent: "#888888",
     background: "#000",
     secondary: "#111",
     // accent: "#3a31d8",
@@ -14,5 +14,9 @@ export const Theme = {
 
     navbarHeight: 40,
 
-    borderRadius: 15
+    borderRadius: 15,
+
+    account: {
+        height:150,
+    }
 };
