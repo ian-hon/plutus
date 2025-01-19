@@ -1,12 +1,30 @@
-import { ActionSheetIOS, Animated, Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActionSheetIOS, Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import styles from './homepage.module.css';
 import { Theme } from "@/constants/theme";
-import React, { useState } from "react";
+import { useState } from "react";
 import { Account } from "@/constants/account";
-import { BlurView } from "expo-blur";
-import CircleBackground from "@/components/CircleBackground";
-import AccountElement from "@/components/AccountElement";
+import { AccountList } from "@/components/AccountElement";
+
+const styles = StyleSheet.create({
+    smallText: {
+        fontFamily:'NotoSans',
+        fontSize:16,
+        lineHeight:30,
+        color:Theme.text,
+    },
+    mediumText: {
+        fontSize:20,
+        fontFamily:'NotoSans',
+        lineHeight:25,
+        color:Theme.text,
+    },
+    largeText: {
+        fontSize:32,
+        fontFamily:'NotoSans',
+        lineHeight:35,
+        color:Theme.text,
+    }
+});
 
 export default function Homepage() {
     const safeAreaInsets = useSafeAreaInsets();
@@ -14,26 +32,6 @@ export default function Homepage() {
         width:Dimensions.get('window').width,
         height:Dimensions.get('window').height,
     };
-    const styles = StyleSheet.create({
-        smallText: {
-            fontFamily:'NotoSans',
-            fontSize:16,
-            lineHeight:30,
-            color:Theme.text,
-        },
-        mediumText: {
-            fontSize:20,
-            fontFamily:'NotoSans',
-            lineHeight:25,
-            color:Theme.text,
-        },
-        largeText: {
-            fontSize:32,
-            fontFamily:'NotoSans',
-            lineHeight:35,
-            color:Theme.text,
-        }
-    });
 
     const noiseImage = require('../assets/images/noise.png');
 
@@ -44,27 +42,27 @@ export default function Homepage() {
             balance: 10.0
         },
         {
-            id: 123123123,
+            id: 192387123,
             name: 'Allowance',
             balance: 100.0
         },
         {
-            id: 123123123,
+            id: 10235813,
             name: 'Savings',
             balance: 1000
         },
         {
-            id: 123123123,
+            id: 5029895023,
             name: 'Savings',
             balance: 10000
         },
         {
-            id: 123123123,
+            id: 239482034,
             name: 'Savings',
             balance: 100000
         },
         {
-            id: 123123123,
+            id: 12309182302,
             name: 'Savings',
             balance: 1230.00
         },
@@ -126,17 +124,17 @@ export default function Homepage() {
                     width:'100%',
                 }} onScroll={(event) => {
                     let s = Math.round((event.nativeEvent.contentOffset.x + 50) / (dimensions.width - 100));
-                    if ((s < 0) || (s > accounts.length)) {
-                        return;
-                    } 
 
-                    if (activeAccount?.id != accounts[s].id) {
-                        changeActiveAccount({...accounts[s]});
+                    if ((s < 0) || (s > accounts.length)) {
+                        // intentionally accounts.length, because the additional index is for the account creation tab
+                        return;
+                    }
+
+                    if ((activeAccount == undefined) || (accounts[s] == undefined) || (activeAccount?.id != accounts[s].id)) {
+                        changeActiveAccount(accounts[s]);
                     }
                 }}>
-                    {
-                        accounts.map((a, i) => <AccountElement a={a} last={i == (accounts.length - 1)} noiseImage={noiseImage} dimensions={dimensions} styles={styles} />)
-                    }
+                    <AccountList accounts={accounts} dimensions={dimensions} noiseImage={noiseImage} styles={styles} />
                 </ScrollView>
             </View>
             <View>
@@ -155,7 +153,6 @@ export default function Homepage() {
                                     }],
                                     ['Request', () => {
                                         console.log('request');
-                                        changeActiveAccount(accounts[0]);
                                     }],
                                     ['Scan', () => {
                                         console.log('scan');
@@ -182,7 +179,7 @@ export default function Homepage() {
                             }
                         </ScrollView>
                         <View>
-                            
+
                         </View>
                     </>
                 }

@@ -3,8 +3,9 @@ import { Theme } from "@/constants/theme";
 import { Image, Pressable, Text, View } from "react-native";
 import CircleBackground from "./CircleBackground";
 import { BlurView } from "expo-blur";
+import React from "react";
 
-export default function AccountElement({ a, last, noiseImage, dimensions, styles } : { a : Account, last: boolean, noiseImage: any, dimensions: { width: number, height: number }, styles: any }): React.JSX.Element {
+export function AccountElement({ a, last, noiseImage, dimensions, styles } : { a : Account, last: boolean, noiseImage: any, dimensions: { width: number, height: number }, styles: any }): React.JSX.Element {
     let currencyFormatter = new Intl.NumberFormat('en-UK', {
         style:'currency',
         currency:'MYR'
@@ -100,7 +101,8 @@ export default function AccountElement({ a, last, noiseImage, dimensions, styles
                 }}>
                     <Text style={[styles.largeText,
                         {
-                            color:Theme.text
+                            color:Theme.text,
+                            lineHeight:0
                         }
                     ]}>
                         +
@@ -111,3 +113,14 @@ export default function AccountElement({ a, last, noiseImage, dimensions, styles
         }
     </>
 }
+
+export const AccountList = React.memo(function AccountList({ accounts, noiseImage, dimensions, styles }: { accounts: Account[], noiseImage: any, dimensions: any, styles: any }) {
+    // prevent account list from rerendering everytime accounts is read
+    // why is reading accounts counted as a mutation? dont ask me
+    return accounts.map((a, i) => <AccountElement a={a} last={i == (accounts.length - 1)} noiseImage={noiseImage} dimensions={dimensions} styles={styles} />)
+},
+(previous, current) => {
+    // if true, then wont change
+    // compare strings because shallow comparison fails on identical arrays
+    return previous.accounts.toString() == current.accounts.toString();
+});
