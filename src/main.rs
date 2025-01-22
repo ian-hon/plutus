@@ -88,6 +88,8 @@ async fn main() {
         .route("/transfer/fetch/outgoing", post(auto_transfer::fetch_outgoing))
         .route("/transfer/delete", post(auto_transfer::delete))
 
+        .route("/log/fetch", post(log::fetch))
+
         .layer(
             CorsLayer::new()
                 .allow_methods(Any)
