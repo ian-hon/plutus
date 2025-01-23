@@ -57,7 +57,7 @@ export function AccountElement({ a, last, noiseImage, dimensions, styles } : { a
                     <Text style={[styles.smallText, {
                         fontFamily:'SpaceMono'
                     }]}>
-                        {a.id.toString(16).slice(0, 4)}-{a.id.toString(16).slice(4, 8)}
+                        {a.id.toString(16).padStart(8, '0').slice(0, 4)}-{a.id.toString(16).padStart(8, '0').slice(4, 8)}
                     </Text>
                     <Text style={[styles.mediumText, {
                         fontFamily:'SpaceMono'

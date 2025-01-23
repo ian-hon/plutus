@@ -4,6 +4,8 @@ import { Theme } from "@/constants/theme";
 import { useState } from "react";
 import { Account } from "@/constants/account";
 import { AccountList } from "@/components/AccountElement";
+import { ToggledSection } from "@/components/ToggledSection";
+import { Transaction } from "@/constants/transaction";
 
 const styles = StyleSheet.create({
     smallText: {
@@ -68,6 +70,8 @@ export default function Homepage() {
         },
     ]);
     const [activeAccount, changeActiveAccount] = useState<Account | undefined>(accounts[0]);
+
+    const [transactions, changeTransactions] = useState<Transaction[]>(Array());
 
     return <View style={{
         justifyContent:'flex-start',
@@ -164,8 +168,11 @@ export default function Homepage() {
                                         }, index => {
                                             console.log(`${index} pressed`);
                                         })
+                                    }],
+                                    ['Top up', () => {
+                                        console.log('top up');
                                     }]
-                                ).map((e) => <Pressable style={{
+                                ).map((e) => <Pressable key={e[0]} style={{
                                     backgroundColor:`${Theme.accent}bb`,
                                     borderRadius:Theme.borderRadius / 2,
                                     paddingVertical:2,
@@ -178,8 +185,40 @@ export default function Homepage() {
                                 </Pressable>)
                             }
                         </ScrollView>
-                        <View>
+                        <View style={{
+                            marginHorizontal:20,
+                            marginTop:10
+                        }}>
+                            {/* <View>
+                                <Text style={[styles.mediumText, { fontFamily:'SpaceMono' }]}>
+                                    transactions
+                                </Text>
+                            </View> */}
+                            <ToggledSection title='transactions'>
+                            {/* pub struct Log {
+                                pub id: i64,
+                                pub species: LogSpecies, // whether is outgoing/incoming
+                                pub origin: Source, // from who
+                                pub destination: Source, // to who
+                                pub state: Outcome, // whether successful or not
+                                pub timestamp: f64
+                            }
 
+                            pub enum LogSpecies {
+                                Incoming,
+                                Outgoing
+                            }
+
+                            pub enum Source {
+                                Bank,
+                                User(i64), // from
+                                AutoTransfer(i64), // from
+                            }
+                            */}
+                                <Text style={styles.mediumText}>
+                                    Lorem ipsum, dolor sit amet consectetur adipisicing elit. Laudantium, voluptatibus obcaecati autem fugiat explicabo saepe maiores voluptate? Exercitationem suscipit modi sequi eum optio iusto quasi aliquam iste harum, ratione illum!
+                                </Text>
+                            </ToggledSection>
                         </View>
                     </>
                 }

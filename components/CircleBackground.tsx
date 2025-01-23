@@ -11,7 +11,7 @@ function animateHelper(a: Animated.Value, start: number, end: number, duration: 
                 {
                     toValue:end,
                     duration:duration,
-                    useNativeDriver:false
+                    useNativeDriver:true
                 }
             ),
             Animated.timing(
@@ -19,7 +19,7 @@ function animateHelper(a: Animated.Value, start: number, end: number, duration: 
                 {
                     toValue:start,
                     duration:duration,
-                    useNativeDriver:false
+                    useNativeDriver:true
                 }
             ),
         ])
@@ -35,8 +35,8 @@ export default function CircleBackground({ dimensions, amount }: { dimensions: {
         const opacityAnim = useAnimatedValue(opacityStart); // needed?
 
         useEffect(() => {
-            animateHelper(xAnim, xStart, xStart + ((Math.random() - 0.5) * 200), (Math.random() * 2000) + 3000);
-            animateHelper(yAnim, yStart, yStart + ((Math.random() - 0.5) * 100), (Math.random() * 2000) + 3000);
+            animateHelper(xAnim, xStart, xStart + ((Math.random() - 0.5) * 200), (Math.random() * 1000) + 2000);
+            animateHelper(yAnim, yStart, yStart + ((Math.random() - 0.5) * 100), (Math.random() * 1000) + 2000);
             animateHelper(opacityAnim, opacityStart, (Math.random() * 0.5) + 0.5, (Math.random() * 1000) + 20000);
 
             // Animated.loop(
@@ -103,8 +103,7 @@ export default function CircleBackground({ dimensions, amount }: { dimensions: {
 
         return <Animated.View key={i} style={{
             position:'absolute',
-            marginTop:yAnim,
-            marginLeft:xAnim,
+            transform: [{ translateX:xAnim }, { translateY:yAnim }],
             backgroundColor:`${colors[Math.round(Math.random() * (colors.length - 1))]}`,
             height:diameter,
             width:diameter,
