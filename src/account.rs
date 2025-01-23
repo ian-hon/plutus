@@ -6,7 +6,7 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sqlx::{prelude::FromRow, Pool, Postgres, Row};
 
-use crate::{extractor_error::ExtractorError, limit::{self, Limit, LimitError}, plutus_error::{Outcome, PlutusFormat}, session::RawSessionID, utils, AppState};
+use crate::{extractor_error::ExtractorError, limit::{self, Limit, LimitError}, log::{Log, LogSpecies, Source}, plutus_error::{Outcome, PlutusFormat}, session::RawSessionID, utils, AppState};
 
 const ID_LENGTH: u32 = 4 * 2;
 
@@ -104,7 +104,7 @@ impl Account {
     }
 
     // balance related
-    pub async fn transfer(db: &Pool<Postgres>, origin: i64, destination: i64, amount: f64) -> Option<Outcome> {
+    pub async fn transfer(db: &Pool<Postgres>, origin: i64, destination: i64, amount: f64, log: bool) -> Option<Outcome> {
         let origin = Account::fetch(db, origin).await;
         if origin.is_none() {
             return Some(Outcome::Account(AccountError::NoExist));
@@ -136,6 +136,11 @@ impl Account {
             .bind(destination.id)
             .execute(db)
             .await.unwrap();
+        
+        if log {
+            Log::append(db, LogSpecies::Outgoing, amount, Source::User(origin.id), Source::User(destination.id), Outcome::Success).await;
+            Log::append(db, LogSpecies::Incoming, amount, Source::User(origin.id), Source::User(destination.id), Outcome::Success).await;
+        }
 
         match Limit::fetch(db, origin.id).await {
             Some(l) => {

@@ -26,13 +26,13 @@ impl AutoTransfer {
             .await.unwrap();
 
         for t in auto_transfers {
-            match Account::transfer(db, t.origin, t.destination, t.amount).await {
+            match Account::transfer(db, t.origin, t.destination, t.amount, false).await {
                 None => {
-                    Log::append(db, LogSpecies::Outgoing, Source::AutoTransfer(t.origin), Source::AutoTransfer(t.destination), Outcome::Success).await;
-                    Log::append(db, LogSpecies::Incoming, Source::AutoTransfer(t.origin), Source::AutoTransfer(t.destination), Outcome::Success).await;
+                    Log::append(db, LogSpecies::Outgoing, t.amount, Source::AutoTransfer(t.origin), Source::AutoTransfer(t.destination), Outcome::Success).await;
+                    Log::append(db, LogSpecies::Incoming, t.amount, Source::AutoTransfer(t.origin), Source::AutoTransfer(t.destination), Outcome::Success).await;
                 },
                 Some(e) => {
-                    Log::append(db, LogSpecies::Outgoing, Source::AutoTransfer(t.origin), Source::AutoTransfer(t.destination), e).await;
+                    Log::append(db, LogSpecies::Outgoing, t.amount, Source::AutoTransfer(t.origin), Source::AutoTransfer(t.destination), e).await;
                 }
             }
 
