@@ -8,6 +8,12 @@ use strum_macros::Display;
 use crate::{account::Account, extractor_error::ExtractorError, session};
 
 #[derive(Serialize, Deserialize, FromRow, Debug)]
+pub struct RawUser {
+    username: String,
+    password: String,
+}
+
+#[derive(Serialize, Deserialize, FromRow)]
 pub struct User {
     pub username: String,
     password: String,
@@ -79,7 +85,7 @@ pub enum UserError {
 
 pub async fn login(
     State(db): State<Pool<Postgres>>,
-    WithRejection(Json(user_info), _): WithRejection<Json<User>, ExtractorError>
+    WithRejection(Json(user_info), _): WithRejection<Json<RawUser>, ExtractorError>
 ) -> impl IntoResponse {
     // Success(string)
     // PasswordWrong
@@ -90,7 +96,11 @@ pub async fn login(
     serde_json::to_string(&User::login(&db, user_info.username, user_info.password).await).unwrap()
 }
 
-pub async fn signup(State(db): State<Pool<Postgres>>, WithRejection(Json(user_info), _): WithRejection<Json<User>, ExtractorError>) -> impl IntoResponse {
+pub async fn signup(
+    State(db): State<Pool<Postgres>>,
+    WithRejection(Json(user_info), _): WithRejection<Json<RawUser>,
+    ExtractorError>
+) -> impl IntoResponse {
     // Success(String)
     // UsernameExist
 
