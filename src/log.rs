@@ -54,10 +54,11 @@ impl Log {
             .await.unwrap();
     }
 
-    pub async fn fetch(db: &Pool<Postgres>, account: i64) -> Vec<Log> {
+    pub async fn fetch(db: &Pool<Postgres>, account: i64, amount: i32) -> Vec<Log> {
         // not sure why the regular method doesnt work
         // possible sql injection vulnerability?
-        sqlx::query_as::<_, RawLog>(&format!("select * from plutus.log where (origin::jsonb ->> 'AutoTransfer' = '{account}') or (origin::jsonb ->> 'User' = '{account}') or (origin::jsonb ->> 'Bank' = '{account}');").to_string())
+        sqlx::query_as::<_, RawLog>(&format!("select * from plutus.log where (origin::jsonb ->> 'AutoTransfer' = '{account}') or (origin::jsonb ->> 'User' = '{account}') or (origin::jsonb ->> 'Bank' = '{account}') order by timestamp desc limit $1;").to_string())
+            .bind(amount)
             .fetch_all(db)
             .await.unwrap()
             .iter().map(|x| RawLog::into(x.clone()))
@@ -85,16 +86,19 @@ pub async fn fetch(
     WithRejection(Json(session_id), _): WithRejection<Json<RawSessionID>, ExtractorError>
 ) -> impl IntoResponse {
     utils::request_boiler(app_state, query, session_id, vec![
-        ("account", PlutusFormat::BigNumber)
+        ("account", PlutusFormat::BigNumber),
+        ("amount", PlutusFormat::Number)
     ], |db, s, q| async move {
         let id = utils::from_query("account", &q).parse::<i64>().unwrap();
+
+        let amount = utils::from_query("amount", &q).parse::<i32>().unwrap().min(100);
 
         if !Account::is_owner(&db, id, s.user).await {
             return Outcome::Account(AccountError::NoExist);
         }
 
         Outcome::Data(
-            serde_json::to_string(&Log::fetch(&db, id).await).unwrap()
+            serde_json::to_string(&Log::fetch(&db, id, amount).await).unwrap()
         )
     }).await
 }
