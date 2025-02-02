@@ -102,7 +102,7 @@ impl AutoTransfer {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub enum AutoTransferError {
     AutoTransferDoesntExist,
 

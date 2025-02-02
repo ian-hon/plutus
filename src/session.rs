@@ -105,7 +105,7 @@ impl RawSessionID {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub enum SessionError {
     SessionIDNoExist,
     SessionIDExpired,

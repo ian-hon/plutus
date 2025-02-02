@@ -53,7 +53,7 @@ impl User {
     }
 }
 
-#[derive(Display, Serialize, Deserialize)]
+#[derive(Display, Serialize, Deserialize, PartialEq, Eq)]
 pub enum UserError {
     Success(String),
 

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{account::AccountError, limit::LimitError, session::SessionError, auto_transfer::AutoTransferError, user::UserError};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum PlutusError {
     Success,
 

@@ -115,7 +115,7 @@ impl Limit {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub enum LimitError {
     LimitAlreadyExists,
     LimitDoesntExist,
