@@ -76,17 +76,18 @@ async fn main() {
         .route("/account/delete", post(account::delete))
         .route("/account/fetch", post(account::fetch))
         .route("/account/fetch/all", post(account::fetch_all))
+        .route("/transfer", post(account::transfer))
 
         .route("/limit/create", post(limit::create))
         .route("/limit/fetch", post(limit::fetch))
         .route("/limit/delete", post(limit::delete))
         .route("/limit/edit", post(limit::edit))
 
-        .route("/transfer/create", post(auto_transfer::create))
-        .route("/transfer/edit", post(auto_transfer::edit))
-        .route("/transfer/fetch/incoming", post(auto_transfer::fetch_incoming))
-        .route("/transfer/fetch/outgoing", post(auto_transfer::fetch_outgoing))
-        .route("/transfer/delete", post(auto_transfer::delete))
+        .route("/auto_transfer/create", post(auto_transfer::create))
+        .route("/auto_transfer/edit", post(auto_transfer::edit))
+        .route("/auto_transfer/fetch/incoming", post(auto_transfer::fetch_incoming))
+        .route("/auto_transfer/fetch/outgoing", post(auto_transfer::fetch_outgoing))
+        .route("/auto_transfer/delete", post(auto_transfer::delete))
 
         .route("/log/fetch", post(log::fetch))
 

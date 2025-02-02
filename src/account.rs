@@ -105,6 +105,11 @@ impl Account {
 
     // balance related
     pub async fn transfer(db: &Pool<Postgres>, origin: i64, destination: i64, amount: f64, log: bool) -> Option<Outcome> {
+        // possible returns
+        // AccountError::NoExist
+        // AccountError::InsufficientBalance
+        // LimitError::WillSurpassLimit
+
         let origin = Account::fetch(db, origin).await;
         if origin.is_none() {
             return Some(Outcome::Account(AccountError::NoExist));
@@ -164,6 +169,44 @@ pub enum AccountError {
     NoPermission,
 
     InsufficientBalance,
+}
+
+pub async fn transfer(
+    State(app_state): State<AppState>,
+    Query(query): Query<HashMap<String, String>>,
+    WithRejection(Json(session_id), _): WithRejection<Json<RawSessionID>, ExtractorError>
+) -> impl IntoResponse {
+    utils::request_boiler(app_state, query, session_id, vec![
+        ("origin", PlutusFormat::BigNumber),
+        ("destination", PlutusFormat::BigNumber),
+        ("amount", PlutusFormat::Float)
+    ], |db, session, query| async move {
+        let origin = utils::from_query("origin", &query).parse::<i64>().unwrap();
+        let destination = utils::from_query("destination", &query).parse::<i64>().unwrap();
+        let amount = utils::from_query("amount", &query).parse::<f64>().unwrap();
+
+        if !Account::is_owner(&db, origin, session.user).await {
+            return Outcome::Account(AccountError::NoPermission);
+        }
+
+        if Account::fetch(&db, destination).await.is_none() {
+            return Outcome::Account(AccountError::NoPermission);
+        }
+
+        if amount <= 0f64 {
+            return Outcome::Account(AccountError::InsufficientBalance);
+        }
+
+        match Account::transfer(&db, origin, destination, amount, true).await {
+            Some(o) => {
+                if o == Outcome::Account(AccountError::NoExist) {
+                    return Outcome::Account(AccountError::NoPermission);
+                }
+                o
+            },
+            None => Outcome::Success
+        }
+    }).await
 }
 
 pub async fn create(

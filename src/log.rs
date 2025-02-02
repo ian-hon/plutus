@@ -93,8 +93,6 @@ pub async fn fetch(
             return Outcome::Account(AccountError::NoExist);
         }
 
-        println!("{id}");
-
         Outcome::Data(
             serde_json::to_string(&Log::fetch(&db, id).await).unwrap()
         )

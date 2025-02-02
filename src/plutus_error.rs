@@ -15,7 +15,7 @@ pub enum PlutusError {
     InvalidFormat, 
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub enum Outcome
 {
     Success,
@@ -26,7 +26,9 @@ pub enum Outcome
     AutoTransfer(AutoTransferError),
     User(UserError),
 
-    Plutus(PlutusError)
+    Plutus(PlutusError),
+
+    Unspecified
 }
 
 pub enum PlutusFormat {
