@@ -6,7 +6,7 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sqlx::{prelude::FromRow, Pool, Postgres, Row};
 
-use crate::{extractor_error::ExtractorError, limit::{self, Limit, LimitError}, log::{Log, LogSpecies, Source}, plutus_error::{Outcome, PlutusFormat}, session::RawSessionID, utils, AppState};
+use crate::{extractor_error::ExtractorError, limit::{Limit, LimitError}, log::{Log, LogSpecies, Source}, plutus_error::{Outcome, PlutusFormat}, session::RawSessionID, user::User, utils, AppState};
 
 const ID_LENGTH: u32 = 4 * 2;
 
@@ -171,7 +171,51 @@ pub enum AccountError {
     InsufficientBalance,
 }
 
-pub async fn transfer(
+// between default accounts of users
+pub async fn user_transfer(
+    State(app_state): State<AppState>,
+    Query(query): Query<HashMap<String, String>>,
+    WithRejection(Json(session_id), _): WithRejection<Json<RawSessionID>, ExtractorError>
+) -> impl IntoResponse {
+    utils::request_boiler(app_state, query, session_id, vec![
+        ("destination", PlutusFormat::Unspecified),
+        ("amount", PlutusFormat::Float)
+    ], |db, session, query| async move {
+        let origin = User::fetch(&db, &session.user).await;
+        if origin.is_none() { // prob not possible but just in case
+            return Outcome::Account(AccountError::NoPermission);
+        }
+        let origin = origin.unwrap();
+
+        let destination = User::fetch(&db, &utils::from_query("destination", &query)).await;
+        if destination.is_none() {
+            return Outcome::Account(AccountError::NoExist);
+        }
+        let destination = destination.unwrap();
+
+        if Account::fetch(&db, destination.default_account).await.is_none() {
+            return Outcome::Account(AccountError::NoPermission);
+        }
+
+        let amount = utils::from_query("amount", &query).parse::<f64>().unwrap();
+        if amount <= 0f64 {
+            return Outcome::Account(AccountError::InsufficientBalance);
+        }
+
+        match Account::transfer(&db, origin.default_account, destination.default_account, amount, true).await {
+            Some(o) => {
+                if o == Outcome::Account(AccountError::NoExist) {
+                    return Outcome::Account(AccountError::NoPermission);
+                }
+                o
+            },
+            None => Outcome::Success
+        }
+    }).await
+}
+
+// between specific accounts
+pub async fn account_transfer(
     State(app_state): State<AppState>,
     Query(query): Query<HashMap<String, String>>,
     WithRejection(Json(session_id), _): WithRejection<Json<RawSessionID>, ExtractorError>

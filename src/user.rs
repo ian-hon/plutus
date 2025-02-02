@@ -5,14 +5,23 @@ use sha256::digest;
 use sqlx::{prelude::FromRow, Pool, Postgres, Row};
 use strum_macros::Display;
 
-use crate::{extractor_error::ExtractorError, session};
+use crate::{account::Account, extractor_error::ExtractorError, session};
 
 #[derive(Serialize, Deserialize, FromRow, Debug)]
 pub struct User {
-    username: String,
-    password: String
+    pub username: String,
+    password: String,
+    pub default_account: i64
 }
 impl User {
+    pub async fn fetch(db: &Pool<Postgres>, username: &String) -> Option<User> {
+        sqlx::query_as::<_, User>("select * from plutus.user where plutus.user.username = $1;")
+            .bind(username)
+            .fetch_optional(db)
+            .await
+            .unwrap()
+    }
+
     pub async fn login(db: &Pool<Postgres>, username: String, password: String) -> UserError {
         if !User::username_existance(db, &username).await {
             return UserError::UsernameNoExist;
@@ -43,9 +52,12 @@ impl User {
             return UserError::UsernameExist;
         }
 
-        sqlx::query("insert into plutus.user(username, password) values($1, $2);")
+        let a = Account::create(db, "savings".to_string(), username.to_string()).await;
+
+        sqlx::query("insert into plutus.user(username, password, default_account) values($1, $2, $3);")
             .bind(username.clone())
             .bind(digest(password))
+            .bind(a.id)
             .execute(db)
             .await.unwrap();
 

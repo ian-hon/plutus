@@ -76,7 +76,7 @@ pub enum LogSpecies {
 pub enum Source {
     Bank,
     User(i64), // from
-    AutoTransfer(i64), // from
+    AutoTransfer(i64), // from (account_id)
 }
 
 
