@@ -57,7 +57,20 @@ impl Log {
     pub async fn fetch(db: &Pool<Postgres>, account: i64, amount: i32) -> Vec<Log> {
         // not sure why the regular method doesnt work
         // possible sql injection vulnerability?
-        sqlx::query_as::<_, RawLog>(&format!("select * from plutus.log where (origin::jsonb ->> 'AutoTransfer' = '{account}') or (origin::jsonb ->> 'User' = '{account}') or (origin::jsonb ->> 'Bank' = '{account}') order by timestamp desc limit $1;").to_string())
+        sqlx::query_as::<_, RawLog>(&format!("
+        select *
+        from plutus.log
+        where
+            (origin::jsonb ->> 'AutoTransfer' = '{account}') or
+            (origin::jsonb ->> 'User' = '{account}') or
+            (origin::jsonb ->> 'Bank' = '{account}') or
+
+            (destination::jsonb ->> 'AutoTransfer' = '{account}') or
+            (destination::jsonb ->> 'User' = '{account}') or
+            (destination::jsonb ->> 'Bank' = '{account}')
+            
+            order by timestamp desc limit $1;
+        ").to_string())
             .bind(amount)
             .fetch_all(db)
             .await.unwrap()

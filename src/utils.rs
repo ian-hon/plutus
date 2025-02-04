@@ -1,7 +1,6 @@
 use std::{collections::HashMap, future::Future, time::{SystemTime, UNIX_EPOCH}};
 
 use axum::response::IntoResponse;
-use serde::Serialize;
 use sqlx::{Pool, Postgres};
 
 use crate::{plutus_error::{self, PlutusError, PlutusFormat, Outcome}, session::{RawSessionID, Session}, AppState};
