@@ -10,7 +10,6 @@ use crate::{account::{Account, AccountError}, extractor_error::ExtractorError, p
 #[derive(FromRow, Serialize, Deserialize, Clone)]
 pub struct RawLog {
     pub id: i64,
-    pub species: String,
     pub balance: f64,
     pub origin: String,
     pub destination: String,
@@ -21,7 +20,6 @@ impl Into<Log> for RawLog {
     fn into(self) -> Log {
         Log {
             id: self.id,
-            species: serde_json::from_str(&self.species).unwrap(),
             balance: self.balance,
             origin: serde_json::from_str(&self.origin).unwrap(),
             destination: serde_json::from_str(&self.destination).unwrap(),
@@ -34,7 +32,6 @@ impl Into<Log> for RawLog {
 #[derive(Serialize, Deserialize)]
 pub struct Log {
     pub id: i64,
-    pub species: LogSpecies, // whether is outgoing/incoming
     pub balance: f64,
     pub origin: Source, // from who
     pub destination: Source, // to who
