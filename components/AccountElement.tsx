@@ -1,10 +1,12 @@
 import { Account } from "@/constants/account";
 import { Theme } from "@/constants/theme";
-import { Image, Pressable, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, Text, View } from "react-native";
 import CircleBackground from "./CircleBackground";
 import { BlurView } from "expo-blur";
 import React from "react";
 import { toID } from "@/constants/utils";
+import { assets, styles } from "@/app/homepage";
+import * as Haptics from "expo-haptics";
 
 export function AccountElement({ a, last, noiseImage, dimensions, styles } : { a : Account, last: boolean, noiseImage: any, dimensions: { width: number, height: number }, styles: any }): React.JSX.Element {
     let currencyFormatter = new Intl.NumberFormat('en-UK', {
@@ -115,10 +117,34 @@ export function AccountElement({ a, last, noiseImage, dimensions, styles } : { a
     </>
 }
 
-export const AccountList = React.memo(function AccountList({ accounts, noiseImage, dimensions, styles }: { accounts: Account[], noiseImage: any, dimensions: any, styles: any }) {
+export const AccountList = React.memo(function AccountList({ accounts, noiseImage, dimensions, styles, activeAccount, changeActiveAccount, func }: { accounts: Account[], noiseImage: any, dimensions: any, styles: any, activeAccount: Account | undefined, changeActiveAccount: any, func: any }) {
+    let a = activeAccount;
     // prevent account list from rerendering everytime accounts is read
     // why is reading accounts counted as a mutation? dont ask me
-    return accounts.map((a, i) => <AccountElement key={a.id} a={a} last={i == (accounts.length - 1)} noiseImage={noiseImage} dimensions={dimensions} styles={styles} />)
+    return <ScrollView horizontal showsHorizontalScrollIndicator={false} contentInset={{ left:50, right:50 }} contentOffset={{ x: -50, y: 0 }} snapToAlignment="center" decelerationRate={0.9} snapToInterval={dimensions.width - 100} style={{
+        width:'100%',
+    }} onScroll={(event) => {
+        let s = Math.round((event.nativeEvent.contentOffset.x + 50) / (dimensions.width - 100));
+
+        if ((s < 0) || (s > accounts.length)) { // intentionally accounts.length, because the additional index is for the account creation tab
+            return;
+        }
+
+        if ((a == undefined) || (accounts[s] == undefined) || (a?.id != accounts[s].id)) {
+            if ((a != accounts[s])) {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid);
+            }
+            a = accounts[s];
+            changeActiveAccount(accounts[s]);
+            if (accounts[s] != undefined) {
+                func(accounts[s]);
+            }
+        }
+    }}>
+        {
+            accounts.map((a, i) => <AccountElement key={a.id} a={a} last={i == (accounts.length - 1)} noiseImage={noiseImage} dimensions={dimensions} styles={styles} />)
+        }
+    </ScrollView>
 },
 (previous, current) => {
     // if true, then wont change

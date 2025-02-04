@@ -1,9 +1,9 @@
 import { ActionSheetIOS, Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, Vibration, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Theme } from "@/constants/theme";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Account } from "@/constants/account";
-import { AccountList } from "@/components/AccountElement";
+import { AccountElement, AccountList } from "@/components/AccountElement";
 import { ToggledSection } from "@/components/ToggledSection";
 import { parseTransaction, Transaction } from "@/constants/transaction";
 import TransactionElement from "@/components/TransactionElement";
@@ -11,7 +11,7 @@ import { BACKEND_ADDRESS } from "@/constants/backend";
 import { constructBody, repackDict } from "@/constants/utils";
 import * as Haptics from 'expo-haptics';
 
-const styles = StyleSheet.create({
+export const styles = StyleSheet.create({
     smallText: {
         fontFamily:'NotoSans',
         fontSize:16,
@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
     }
 });
 
-const assets: Map<String, any>= new Map([
+export const assets: Map<String, any>= new Map([
     ['noise', require('../assets/images/noise.png')],
     ['outgoing', require('../assets/images/outgoing.png')],
     ['incoming', require('../assets/images/incoming.png')],
@@ -155,7 +155,7 @@ export default function Homepage({ navigation, route }: { navigation:any, route:
                     <Text style={[styles.smallText, {
                         marginLeft:10
                     }]}>
-                        han_yuji
+                        {activeAccount?.name}
                     </Text>
                 </View>
             </View>
@@ -163,28 +163,10 @@ export default function Homepage({ navigation, route }: { navigation:any, route:
                 marginTop:15,
                 marginBottom:15,
             }}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentInset={{ left:50, right:50 }} contentOffset={{ x: -50, y: 0 }} snapToAlignment="center" decelerationRate={0.9} snapToInterval={dimensions.width - 100} style={{
-                    width:'100%',
-                }} onScroll={(event) => {
-                    let s = Math.round((event.nativeEvent.contentOffset.x + 50) / (dimensions.width - 100));
-
-                    if ((s < 0) || (s > accounts.length)) { // intentionally accounts.length, because the additional index is for the account creation tab
-                        return;
-                    }
-
-                    if ((activeAccount == undefined) || (accounts[s] == undefined) || (activeAccount?.id != accounts[s].id)) {
-                        if ((activeAccount != accounts[s])) {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid);
-                        }
-                        changeActiveAccount(accounts[s]);
-                        if (accounts[s] != undefined) {
-                            let t = transactionMap.get(accounts[s].id);
-                            changeActiveTransactions(t == undefined ? [] : t);
-                        }
-                    }
-                }}>
-                    <AccountList accounts={accounts} dimensions={dimensions} noiseImage={assets.get('noise')} styles={styles} />
-                </ScrollView>
+                <AccountList accounts={accounts} dimensions={dimensions} noiseImage={assets.get('noise')} styles={styles} func={(i: any) => {
+                    let t = transactionMap.get(i.id);
+                    changeActiveTransactions(t == undefined ? [] : t);
+                }} activeAccount={activeAccount} changeActiveAccount={changeActiveAccount} />
             </View>
             <View>
                 {
@@ -203,7 +185,7 @@ export default function Homepage({ navigation, route }: { navigation:any, route:
                                 Array<[string, () => void]>(
                                     ['send', () => {
                                         console.log('transfer');
-                                        navigation.navigate('wip', {
+                                        navigation.navigate('send', {
                                             sessionID: sessionID,
                                             accountID: activeAccount.id
                                         });

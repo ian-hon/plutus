@@ -5,7 +5,7 @@ export const Theme = {
     secondary: "#111",
     // accent: "#3a31d8",
     // accent: "#ca86e5",
-    accent: "#a285e6",
+    accent: "#926df2",
 
     fontSmall: 15,
     fontMedium: 20,

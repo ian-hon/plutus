@@ -6,6 +6,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Login from './login';
 import Homepage from './homepage';
 import WIP from './wip';
+import Send from './send';
 
 // npx expo start --tunnel
 
@@ -25,6 +26,7 @@ export default function RootLayout() {
             <Stack.Screen name={'homepage'} component={Homepage} />
             <Stack.Screen name={'login'} component={Login} />
             <Stack.Screen name={'wip'} component={WIP} />
+            <Stack.Screen name={'send'} component={Send} />
         </Stack.Navigator>
     );
 }
