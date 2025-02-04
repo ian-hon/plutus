@@ -155,7 +155,7 @@ export default function Homepage({ navigation, route }: { navigation:any, route:
                     <Text style={[styles.smallText, {
                         marginLeft:10
                     }]}>
-                        {activeAccount?.name}
+                        han_yuji
                     </Text>
                 </View>
             </View>
@@ -163,99 +163,97 @@ export default function Homepage({ navigation, route }: { navigation:any, route:
                 marginTop:15,
                 marginBottom:15,
             }}>
-                <AccountList accounts={accounts} dimensions={dimensions} noiseImage={assets.get('noise')} styles={styles} func={(i: any) => {
+                <AccountList accounts={accounts} dimensions={dimensions} noiseImage={assets.get('noise')} styles={styles} showLast={true} func={(i: any) => {
                     let t = transactionMap.get(i.id);
                     changeActiveTransactions(t == undefined ? [] : t);
                 }} activeAccount={activeAccount} changeActiveAccount={changeActiveAccount} />
             </View>
             <View>
-                {
-                    activeAccount == undefined ? <></> : <>
-                        <View style={{
-                            marginTop:15,
-                            marginBottom:15,
-                            paddingLeft:20,
-                            paddingRight:20,
+                {(activeAccount != undefined) && <>
+                <View style={{
+                    marginTop:15,
+                    marginBottom:15,
+                    paddingLeft:20,
+                    paddingRight:20,
 
-                            justifyContent:'center',
-                            alignItems:'center',
-                            flexDirection:'row'
-                        }}>
-                            {
-                                Array<[string, () => void]>(
-                                    ['send', () => {
-                                        console.log('transfer');
-                                        navigation.navigate('send', {
-                                            sessionID: sessionID,
-                                            accountID: activeAccount.id
-                                        });
-                                    }],
-                                    ['request', () => {
-                                        console.log('request');
-                                        navigation.navigate('wip', {
-                                            sessionID: sessionID,
-                                            accountID: activeAccount.id
-                                        });
-                                    }],
-                                    ['scan', () => {
-                                        console.log('scan');
-                                        ActionSheetIOS.showActionSheetWithOptions({
-                                            options:['cancel', 'test', 'lorem'],
-                                            tintColor:Theme.accent,
-                                            destructiveButtonIndex:[1],
-                                            cancelButtonIndex:0
-                                        }, index => {
-                                            console.log(`${index} pressed`);
-                                        })
-                                    }],
-                                    ['top_up', () => {
-                                        console.log('top up');
-                                        navigation.navigate('wip', {
-                                            sessionID: sessionID,
-                                            accountID: activeAccount.id
-                                        });
-                                    }]
-                                ).map((e, index) => <Pressable key={e[0]} style={{
-                                    backgroundColor:`${Theme.accent}bb`,
-                                    borderRadius:1000,
-                                    marginRight:index == 3 ? 0 : 15,
-                                    padding:13,
-                                }} onPress={e[1]}>
-                                    <Image source={assets.get(e[0])} style={{
-                                        height:22,
-                                        width:22,
-                                    }}/>
-                                </Pressable>)
-                            }
-                        </View>
-                        <View style={{
-                            marginHorizontal:20,
-                            marginTop:10,
-                        }}>
-                            <Text style={[styles.mediumText, {
-                                fontFamily:'SpaceMono'
-                            }]}>
-                                recent history
-                            </Text>
-                            <View>
-                                {
-                                    activeTransactions.map((e) => <TransactionElement parent={activeAccount} incoming={assets.get('incoming')} outgoing={assets.get('outgoing')} key={e.id} t={e} fmt={currencyFormatter} />)
-                                }
-                            </View>
-                            <Pressable onPress={() => {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-                            }} style={{
-                                marginTop:10
-                            }}>
-                                <Text style={[styles.hyperlink, {
-                                    textAlign:'center'
-                                }]}>
-                                    view more
-                                </Text>
-                            </Pressable>
-                        </View>
-                    </>
-                }
+                    justifyContent:'center',
+                    alignItems:'center',
+                    flexDirection:'row'
+                }}>
+                    {
+                        Array<[string, () => void]>(
+                            ['send', () => {
+                                console.log('transfer');
+                                navigation.navigate('send', {
+                                    sessionID: sessionID,
+                                    accountID: activeAccount.id
+                                });
+                            }],
+                            ['request', () => {
+                                console.log('request');
+                                navigation.navigate('wip', {
+                                    sessionID: sessionID,
+                                    accountID: activeAccount.id
+                                });
+                            }],
+                            ['scan', () => {
+                                console.log('scan');
+                                ActionSheetIOS.showActionSheetWithOptions({
+                                    options:['cancel', 'test', 'lorem'],
+                                    tintColor:Theme.accent,
+                                    destructiveButtonIndex:[1],
+                                    cancelButtonIndex:0
+                                }, index => {
+                                    console.log(`${index} pressed`);
+                                })
+                            }],
+                            ['top_up', () => {
+                                console.log('top up');
+                                navigation.navigate('wip', {
+                                    sessionID: sessionID,
+                                    accountID: activeAccount.id
+                                });
+                            }]
+                        ).map((e, index) => <Pressable key={e[0]} style={{
+                            backgroundColor:`${Theme.accent}bb`,
+                            borderRadius:1000,
+                            marginRight:index == 3 ? 0 : 15,
+                            padding:13,
+                        }} onPress={e[1]}>
+                            <Image source={assets.get(e[0])} style={{
+                                height:22,
+                                width:22,
+                            }}/>
+                        </Pressable>)
+                    }
+                </View>
+                <View style={{
+                    marginHorizontal:20,
+                    marginTop:10,
+                }}>
+                    <Text style={[styles.mediumText, {
+                        fontFamily:'SpaceMono'
+                    }]}>
+                        recent history
+                    </Text>
+                    <View>
+                        {
+                            activeTransactions.map((e) => <TransactionElement parent={activeAccount} incoming={assets.get('incoming')} outgoing={assets.get('outgoing')} key={e.id} t={e} fmt={currencyFormatter} />)
+                        }
+                    </View>
+                    <Pressable onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                    }} style={{
+                        marginTop:10
+                    }}>
+                        <Text style={[styles.hyperlink, {
+                            textAlign:'center'
+                        }]}>
+                            view more
+                        </Text>
+                    </Pressable>
+                </View>
+                </>}
             </View>
         </ScrollView>
     </View>

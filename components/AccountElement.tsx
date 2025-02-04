@@ -117,7 +117,7 @@ export function AccountElement({ a, last, noiseImage, dimensions, styles } : { a
     </>
 }
 
-export const AccountList = React.memo(function AccountList({ accounts, noiseImage, dimensions, styles, activeAccount, changeActiveAccount, func }: { accounts: Account[], noiseImage: any, dimensions: any, styles: any, activeAccount: Account | undefined, changeActiveAccount: any, func: any }) {
+export const AccountList = React.memo(function AccountList({ accounts, noiseImage, dimensions, styles, activeAccount, changeActiveAccount, func, showLast: showCreation }: { accounts: Account[], noiseImage: any, dimensions: any, styles: any, activeAccount: Account | undefined, changeActiveAccount: any, func: any, showLast: boolean }) {
     let a = activeAccount;
     // prevent account list from rerendering everytime accounts is read
     // why is reading accounts counted as a mutation? dont ask me
@@ -142,7 +142,7 @@ export const AccountList = React.memo(function AccountList({ accounts, noiseImag
         }
     }}>
         {
-            accounts.map((a, i) => <AccountElement key={a.id} a={a} last={i == (accounts.length - 1)} noiseImage={noiseImage} dimensions={dimensions} styles={styles} />)
+            accounts.map((a, i) => <AccountElement key={a.id} a={a} last={showCreation && (i == (accounts.length - 1))} noiseImage={noiseImage} dimensions={dimensions} styles={styles} />)
         }
     </ScrollView>
 },
