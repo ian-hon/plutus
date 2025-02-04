@@ -4,6 +4,7 @@ import { Image, Pressable, Text, View } from "react-native";
 import CircleBackground from "./CircleBackground";
 import { BlurView } from "expo-blur";
 import React from "react";
+import { toID } from "@/constants/utils";
 
 export function AccountElement({ a, last, noiseImage, dimensions, styles } : { a : Account, last: boolean, noiseImage: any, dimensions: { width: number, height: number }, styles: any }): React.JSX.Element {
     let currencyFormatter = new Intl.NumberFormat('en-UK', {
@@ -57,7 +58,7 @@ export function AccountElement({ a, last, noiseImage, dimensions, styles } : { a
                     <Text style={[styles.smallText, {
                         fontFamily:'SpaceMono'
                     }]}>
-                        {a.id.toString(16).padStart(8, '0').slice(0, 4)}-{a.id.toString(16).padStart(8, '0').slice(4, 8)}
+                        {toID(a.id)}
                     </Text>
                     <Text style={[styles.mediumText, {
                         fontFamily:'SpaceMono'
@@ -67,7 +68,7 @@ export function AccountElement({ a, last, noiseImage, dimensions, styles } : { a
         </View>
         {
             last ?
-            <Pressable style={({pressed}) => [
+            <Pressable key='new' style={({pressed}) => [
                 {
                     height:height,
                     width:width,
@@ -117,7 +118,7 @@ export function AccountElement({ a, last, noiseImage, dimensions, styles } : { a
 export const AccountList = React.memo(function AccountList({ accounts, noiseImage, dimensions, styles }: { accounts: Account[], noiseImage: any, dimensions: any, styles: any }) {
     // prevent account list from rerendering everytime accounts is read
     // why is reading accounts counted as a mutation? dont ask me
-    return accounts.map((a, i) => <AccountElement a={a} last={i == (accounts.length - 1)} noiseImage={noiseImage} dimensions={dimensions} styles={styles} />)
+    return accounts.map((a, i) => <AccountElement key={a.id} a={a} last={i == (accounts.length - 1)} noiseImage={noiseImage} dimensions={dimensions} styles={styles} />)
 },
 (previous, current) => {
     // if true, then wont change

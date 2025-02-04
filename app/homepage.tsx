@@ -1,11 +1,15 @@
-import { ActionSheetIOS, Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActionSheetIOS, Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, Vibration, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Theme } from "@/constants/theme";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Account } from "@/constants/account";
 import { AccountList } from "@/components/AccountElement";
 import { ToggledSection } from "@/components/ToggledSection";
-import { Transaction } from "@/constants/transaction";
+import { parseTransaction, Transaction } from "@/constants/transaction";
+import TransactionElement from "@/components/TransactionElement";
+import { BACKEND_ADDRESS } from "@/constants/backend";
+import { constructBody, repackDict } from "@/constants/utils";
+import * as Haptics from 'expo-haptics';
 
 const styles = StyleSheet.create({
     smallText: {
@@ -25,53 +29,88 @@ const styles = StyleSheet.create({
         fontFamily:'NotoSans',
         lineHeight:35,
         color:Theme.text,
+    },
+    hyperlink: {
+        fontSize:15,
+        fontFamily:'NotoSansItalic',
+        lineHeight:25,
+        color:Theme.accent,
     }
 });
 
-export default function Homepage() {
+const assets: Map<String, any>= new Map([
+    ['noise', require('../assets/images/noise.png')],
+    ['outgoing', require('../assets/images/outgoing.png')],
+    ['incoming', require('../assets/images/incoming.png')],
+    ['send', require('../assets/images/actions/send.png')],
+    ['request', require('../assets/images/actions/request.png')],
+    ['scan', require('../assets/images/actions/scan.png')],
+    ['top_up', require('../assets/images/actions/top_up.png')],
+]);
+
+export default function Homepage({ navigation, route }: { navigation:any, route: any }) {
     const safeAreaInsets = useSafeAreaInsets();
     const dimensions = {
         width:Dimensions.get('window').width,
         height:Dimensions.get('window').height,
     };
+    const currencyFormatter = new Intl.NumberFormat('en-UK', {
+        style:'currency',
+        currency:'MYR'
+    });
 
-    const noiseImage = require('../assets/images/noise.png');
 
-    const [accounts, changeAccounts] = useState<Account[]>([
-        {
-            id: 2388376114,
-            name: 'Savings',
-            balance: 10.0
-        },
-        {
-            id: 192387123,
-            name: 'Allowance',
-            balance: 100.0
-        },
-        {
-            id: 10235813,
-            name: 'Savings',
-            balance: 1000
-        },
-        {
-            id: 5029895023,
-            name: 'Savings',
-            balance: 10000
-        },
-        {
-            id: 239482034,
-            name: 'Savings',
-            balance: 100000
-        },
-        {
-            id: 12309182302,
-            name: 'Savings',
-            balance: 1230.00
-        },
-    ]);
-    const [activeAccount, changeActiveAccount] = useState<Account | undefined>(accounts[0]);
+    // const sessionID = route.params.sessionID;
+    // TODO : remove in prod
+    const sessionID = '1cc9cb0195ef807';
+    const [accounts, changeAccounts] = useState<Account[]>([]);
+    const [transactionMap, changeTransactionMap] = useState<Map<number, Transaction[]>>(new Map());
 
-    const [transactions, changeTransactions] = useState<Transaction[]>(Array());
+    const [activeAccount, changeActiveAccount] = useState<Account | undefined>(undefined);
+    const [activeTransactions, changeActiveTransactions] = useState<Transaction[]>([]);
+
+    function updateAccountDetails() {
+        fetch(`${BACKEND_ADDRESS}/account/fetch/all`, constructBody(sessionID))
+        .then(r => r.json())
+        .then(r => {
+            let data = repackDict(r)['Data'];
+            if (data == undefined) {
+                return;
+            }
+            let a = JSON.parse(data);
+            let currentAccount = a[0];
+
+            changeAccounts(a);
+            changeActiveAccount(currentAccount);
+
+            a.forEach((i: any) => {
+                changeTransactionMap(e => e.set(i.id, []));
+        
+                fetch(`${BACKEND_ADDRESS}/log/fetch?account=${i.id}&amount=5`, constructBody(sessionID))
+                .then(r => r.json())
+                .then(r => {
+                    let data = repackDict(r)['Data'];
+                    if (data == undefined) {
+                        return;
+                    }
+                    // request can be sent whilst in between swiping,
+                    // a's transactions might arrive when user is already viewing b
+
+                    let c = JSON.parse(data).map((e: any) => parseTransaction(e));
+
+                    changeTransactionMap(e => e.set(i.id, c));
+                    if (i.id == currentAccount.id) {
+                        changeActiveTransactions(c);
+                    }
+                })
+            })
+        })
+    }
+
+    useEffect(() => {
+        updateAccountDetails();
+    }, [])
+
 
     return <View style={{
         justifyContent:'flex-start',
@@ -81,7 +120,7 @@ export default function Homepage() {
         height:'100%',
         backgroundColor:Theme.background,
     }}>
-        <View style={{
+        <ScrollView style={{
             width:'100%',
             height:'100%',
             paddingTop:safeAreaInsets.top,
@@ -129,36 +168,54 @@ export default function Homepage() {
                 }} onScroll={(event) => {
                     let s = Math.round((event.nativeEvent.contentOffset.x + 50) / (dimensions.width - 100));
 
-                    if ((s < 0) || (s > accounts.length)) {
-                        // intentionally accounts.length, because the additional index is for the account creation tab
+                    if ((s < 0) || (s > accounts.length)) { // intentionally accounts.length, because the additional index is for the account creation tab
                         return;
                     }
 
                     if ((activeAccount == undefined) || (accounts[s] == undefined) || (activeAccount?.id != accounts[s].id)) {
+                        if ((activeAccount != accounts[s])) {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid);
+                        }
                         changeActiveAccount(accounts[s]);
+                        if (accounts[s] != undefined) {
+                            let t = transactionMap.get(accounts[s].id);
+                            changeActiveTransactions(t == undefined ? [] : t);
+                        }
                     }
                 }}>
-                    <AccountList accounts={accounts} dimensions={dimensions} noiseImage={noiseImage} styles={styles} />
+                    <AccountList accounts={accounts} dimensions={dimensions} noiseImage={assets.get('noise')} styles={styles} />
                 </ScrollView>
             </View>
             <View>
                 {
                     activeAccount == undefined ? <></> : <>
-                        <ScrollView horizontal style={{
+                        <View style={{
                             marginTop:15,
                             marginBottom:15,
                             paddingLeft:20,
-                            paddingRight:20
+                            paddingRight:20,
+
+                            justifyContent:'center',
+                            alignItems:'center',
+                            flexDirection:'row'
                         }}>
                             {
                                 Array<[string, () => void]>(
-                                    ['Send', () => {
+                                    ['send', () => {
                                         console.log('transfer');
+                                        navigation.navigate('wip', {
+                                            sessionID: sessionID,
+                                            accountID: activeAccount.id
+                                        });
                                     }],
-                                    ['Request', () => {
+                                    ['request', () => {
                                         console.log('request');
+                                        navigation.navigate('wip', {
+                                            sessionID: sessionID,
+                                            accountID: activeAccount.id
+                                        });
                                     }],
-                                    ['Scan', () => {
+                                    ['scan', () => {
                                         console.log('scan');
                                         ActionSheetIOS.showActionSheetWithOptions({
                                             options:['cancel', 'test', 'lorem'],
@@ -169,60 +226,55 @@ export default function Homepage() {
                                             console.log(`${index} pressed`);
                                         })
                                     }],
-                                    ['Top up', () => {
+                                    ['top_up', () => {
                                         console.log('top up');
+                                        navigation.navigate('wip', {
+                                            sessionID: sessionID,
+                                            accountID: activeAccount.id
+                                        });
                                     }]
-                                ).map((e) => <Pressable key={e[0]} style={{
+                                ).map((e, index) => <Pressable key={e[0]} style={{
                                     backgroundColor:`${Theme.accent}bb`,
-                                    borderRadius:Theme.borderRadius / 2,
-                                    paddingVertical:2,
-                                    paddingHorizontal:15,
-                                    marginRight:15
+                                    borderRadius:1000,
+                                    marginRight:index == 3 ? 0 : 15,
+                                    padding:13,
                                 }} onPress={e[1]}>
-                                    <Text style={styles.smallText}>
-                                        {e[0].toString()}
-                                    </Text>
+                                    <Image source={assets.get(e[0])} style={{
+                                        height:22,
+                                        width:22,
+                                    }}/>
                                 </Pressable>)
                             }
-                        </ScrollView>
+                        </View>
                         <View style={{
                             marginHorizontal:20,
-                            marginTop:10
+                            marginTop:10,
                         }}>
-                            {/* <View>
-                                <Text style={[styles.mediumText, { fontFamily:'SpaceMono' }]}>
-                                    transactions
+                            <Text style={[styles.mediumText, {
+                                fontFamily:'SpaceMono'
+                            }]}>
+                                recent history
+                            </Text>
+                            <View>
+                                {
+                                    activeTransactions.map((e) => <TransactionElement parent={activeAccount} incoming={assets.get('incoming')} outgoing={assets.get('outgoing')} key={e.id} t={e} fmt={currencyFormatter} />)
+                                }
+                            </View>
+                            <Pressable onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                            }} style={{
+                                marginTop:10
+                            }}>
+                                <Text style={[styles.hyperlink, {
+                                    textAlign:'center'
+                                }]}>
+                                    view more
                                 </Text>
-                            </View> */}
-                            <ToggledSection title='transactions'>
-                            {/* pub struct Log {
-                                pub id: i64,
-                                pub species: LogSpecies, // whether is outgoing/incoming
-                                pub origin: Source, // from who
-                                pub destination: Source, // to who
-                                pub state: Outcome, // whether successful or not
-                                pub timestamp: f64
-                            }
-
-                            pub enum LogSpecies {
-                                Incoming,
-                                Outgoing
-                            }
-
-                            pub enum Source {
-                                Bank,
-                                User(i64), // from
-                                AutoTransfer(i64), // from
-                            }
-                            */}
-                                <Text style={styles.mediumText}>
-                                    Lorem ipsum, dolor sit amet consectetur adipisicing elit. Laudantium, voluptatibus obcaecati autem fugiat explicabo saepe maiores voluptate? Exercitationem suscipit modi sequi eum optio iusto quasi aliquam iste harum, ratione illum!
-                                </Text>
-                            </ToggledSection>
+                            </Pressable>
                         </View>
                     </>
                 }
             </View>
-        </View>
+        </ScrollView>
     </View>
 }

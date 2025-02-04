@@ -1,5 +1,6 @@
 import { BACKEND_ADDRESS } from "@/constants/backend";
 import { Theme } from "@/constants/theme";
+import { repackDict } from "@/constants/utils";
 import { useRef, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -51,8 +52,11 @@ export default function Login({ navigation }: { navigation:any }) {
         })
         .then(r => r.json())
         .then(r => {
-            if (JSON.parse(JSON.stringify(r))['Success'] != undefined) {
-                navigation.navigate('homepage');
+            let id = repackDict(r)['Success'];
+            if (id != undefined) {
+                navigation.navigate('homepage', {
+                    sessionID: id
+                });
             } else {
                 let message = {
                     'PasswordWrong': 'password is wrong',

@@ -101,7 +101,7 @@ export default function CircleBackground({ dimensions, amount }: { dimensions: {
             // ).start();
         }, [xAnim, yAnim, opacityAnim]);
 
-        return <Animated.View key={i} style={{
+        return <Animated.View style={{
             position:'absolute',
             transform: [{ translateX:xAnim }, { translateY:yAnim }],
             backgroundColor:`${colors[Math.round(Math.random() * (colors.length - 1))]}`,
@@ -124,7 +124,7 @@ export default function CircleBackground({ dimensions, amount }: { dimensions: {
         let y = (Math.sin(a + previous) * d) + ((dimensions.height / 2) - (diameter / 2));
         previous += a;
 
-        result.push(<Circle i={i} xStart={x} yStart={y} diameter={diameter} />);
+        result.push(<Circle key={i} i={i} xStart={x} yStart={y} diameter={diameter} />);
     }
 
     return <>

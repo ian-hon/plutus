@@ -1,6 +1,6 @@
 import { Theme } from "@/constants/theme";
 import React, { useState } from "react";
-import { Image } from "react-native";
+import { Image, ScrollView } from "react-native";
 import { Pressable, Text, View } from "react-native";
 
 export const ToggledSection = React.memo(function ToggledSection({ children, title }: { children: any, title: string }) {

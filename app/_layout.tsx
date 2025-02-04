@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Login from './login';
 import Homepage from './homepage';
+import WIP from './wip';
 
 // npx expo start --tunnel
 
@@ -23,6 +24,7 @@ export default function RootLayout() {
         <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen name={'homepage'} component={Homepage} />
             <Stack.Screen name={'login'} component={Login} />
+            <Stack.Screen name={'wip'} component={WIP} />
         </Stack.Navigator>
     );
 }
