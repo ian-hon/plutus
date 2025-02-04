@@ -143,8 +143,7 @@ impl Account {
             .await.unwrap();
         
         if log {
-            Log::append(db, LogSpecies::Outgoing, amount, Source::User(origin.id), Source::User(destination.id), Outcome::Success).await;
-            Log::append(db, LogSpecies::Incoming, amount, Source::User(origin.id), Source::User(destination.id), Outcome::Success).await;
+            Log::append(db, amount, Source::User(origin.id), Source::User(destination.id), Outcome::Success).await;
         }
 
         match Limit::fetch(db, origin.id).await {

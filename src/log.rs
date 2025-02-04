@@ -42,9 +42,9 @@ pub struct Log {
     pub timestamp: f64
 }
 impl Log {
-    pub async fn append(db: &Pool<Postgres>, species: LogSpecies, balance: f64, origin: Source, destination: Source, state: Outcome) {
-        sqlx::query("insert into plutus.log(species, balance, origin, destination, state, timestamp) values($1, $2, $3, $4, $5, $6);")
-            .bind(serde_json::to_string(&species).unwrap())
+    pub async fn append(db: &Pool<Postgres>, balance: f64, origin: Source, destination: Source, state: Outcome) {
+        sqlx::query("insert into plutus.log(balance, origin, destination, state, timestamp) values($1, $2, $3, $4, $5);")
+            // .bind(serde_json::to_string(&species).unwrap())
             .bind(balance)
             .bind(serde_json::to_string(&origin).unwrap())
             .bind(serde_json::to_string(&destination).unwrap())
