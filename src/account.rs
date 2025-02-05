@@ -213,6 +213,49 @@ pub async fn user_transfer(
     }).await
 }
 
+// between selected account to specific user
+pub async fn account_to_user_transfer(
+    State(app_state): State<AppState>,
+    Query(query): Query<HashMap<String, String>>,
+    WithRejection(Json(session_id), _): WithRejection<Json<RawSessionID>, ExtractorError>
+) -> impl IntoResponse {
+    utils::request_boiler(app_state, query, session_id, vec![
+        ("origin", PlutusFormat::BigNumber),
+        ("destination", PlutusFormat::Unspecified),
+        ("amount", PlutusFormat::Float)
+    ], |db, session, query| async move {
+        let origin = utils::from_query("origin", &query).parse::<i64>().unwrap();
+        if !Account::is_owner(&db, origin, session.user).await {
+            return Outcome::Account(AccountError::NoPermission);
+        }
+
+        let destination = User::fetch(&db, &utils::from_query("destination", &query)).await;
+        if destination.is_none() {
+            return Outcome::Account(AccountError::NoExist);
+        }
+        let destination = destination.unwrap();
+
+        if Account::fetch(&db, destination.default_account).await.is_none() {
+            return Outcome::Account(AccountError::NoPermission);
+        }
+
+        let amount = utils::from_query("amount", &query).parse::<f64>().unwrap();
+        if amount <= 0f64 {
+            return Outcome::Account(AccountError::InsufficientBalance);
+        }
+
+        match Account::transfer(&db, origin, destination.default_account, amount, true).await {
+            Some(o) => {
+                if o == Outcome::Account(AccountError::NoExist) {
+                    return Outcome::Account(AccountError::NoPermission);
+                }
+                o
+            },
+            None => Outcome::Success
+        }
+    }).await
+}
+
 // between specific accounts
 pub async fn account_transfer(
     State(app_state): State<AppState>,

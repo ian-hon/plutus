@@ -88,8 +88,9 @@ async fn main() {
         .route("/auto_transfer/fetch/outgoing", post(auto_transfer::fetch_outgoing))
         .route("/auto_transfer/delete", post(auto_transfer::delete))
 
-        .route("/transfer/account", post(account::account_transfer))
-        .route("/transfer/user", post(account::user_transfer))
+        .route("/transfer/account/account", post(account::account_transfer))
+        .route("/transfer/account/user", post(account::account_to_user_transfer))
+        .route("/transfer/user/user", post(account::user_transfer))
 
         .route("/log/fetch", post(log::fetch))
 
