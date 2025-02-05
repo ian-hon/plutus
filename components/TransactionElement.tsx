@@ -23,6 +23,8 @@ export default function TransactionElement({ parent, t, fmt, incoming, outgoing 
     // User(i64), // from
     // AutoTransfer(i64), // from;
 
+    let isIncoming = t.destination.id == parent.id;
+
     return <View style={{
         width:'100%',
         justifyContent:'space-between',
@@ -34,7 +36,7 @@ export default function TransactionElement({ parent, t, fmt, incoming, outgoing 
             alignItems:'center',
             flexDirection:'row'
         }}>
-            <Image source={t.destination.id == parent.id ? incoming : outgoing} style={{
+            <Image source={isIncoming ? incoming : outgoing} style={{
                 width:15,
                 height:15,
                 marginLeft:10,
@@ -80,10 +82,10 @@ export default function TransactionElement({ parent, t, fmt, incoming, outgoing 
                     fontFamily:'NotoSans',
                     marginRight: 5
                 }]}>
-                    from
+                    {isIncoming ? 'from' : 'to'}
                 </Text>
                 <Text style={styles.text}>
-                    {toID(t.destination.id)}
+                    {toID(isIncoming ? t.origin.id : t.destination.id)}
                 </Text>
             </View>
         </View>

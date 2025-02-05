@@ -5,7 +5,7 @@ import { Pressable, Text, View } from "react-native";
 
 export const ToggledSection = React.memo(function ToggledSection({ children, title }: { children: any, title: string }) {
     const [active, changeActive] = useState(true);
-    const arrowImage = require('../assets/images/chevron.png');
+    const arrowImage = require('../assets/images/filled_arrow.png');
 
     return <View style={{
     }}>

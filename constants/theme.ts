@@ -1,3 +1,5 @@
+import { StyleSheet } from "react-native";
+
 export const Theme = {
     text: "#fff",
     textTranslucent: "#888888",
@@ -20,3 +22,30 @@ export const Theme = {
         height:150,
     }
 };
+
+export const styles = StyleSheet.create({
+    smallText: {
+        fontFamily:'NotoSans',
+        fontSize:16,
+        lineHeight:30,
+        color:Theme.text,
+    },
+    mediumText: {
+        fontSize:20,
+        fontFamily:'NotoSans',
+        lineHeight:25,
+        color:Theme.text,
+    },
+    largeText: {
+        fontSize:32,
+        fontFamily:'NotoSans',
+        lineHeight:35,
+        color:Theme.text,
+    },
+    hyperlink: {
+        fontSize:15,
+        fontFamily:'NotoSansItalic',
+        lineHeight:25,
+        color:Theme.accent,
+    }
+});

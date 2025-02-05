@@ -1,6 +1,6 @@
 import { ActionSheetIOS, Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, Vibration, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Theme } from "@/constants/theme";
+import { styles, Theme } from "@/constants/theme";
 import { useEffect, useRef, useState } from "react";
 import { Account } from "@/constants/account";
 import { AccountElement, AccountList } from "@/components/AccountElement";
@@ -10,33 +10,6 @@ import TransactionElement from "@/components/TransactionElement";
 import { BACKEND_ADDRESS } from "@/constants/backend";
 import { constructBody, repackDict } from "@/constants/utils";
 import * as Haptics from 'expo-haptics';
-
-export const styles = StyleSheet.create({
-    smallText: {
-        fontFamily:'NotoSans',
-        fontSize:16,
-        lineHeight:30,
-        color:Theme.text,
-    },
-    mediumText: {
-        fontSize:20,
-        fontFamily:'NotoSans',
-        lineHeight:25,
-        color:Theme.text,
-    },
-    largeText: {
-        fontSize:32,
-        fontFamily:'NotoSans',
-        lineHeight:35,
-        color:Theme.text,
-    },
-    hyperlink: {
-        fontSize:15,
-        fontFamily:'NotoSansItalic',
-        lineHeight:25,
-        color:Theme.accent,
-    }
-});
 
 export const assets: Map<String, any>= new Map([
     ['noise', require('../assets/images/noise.png')],
@@ -63,6 +36,7 @@ export default function Homepage({ navigation, route }: { navigation:any, route:
     // const sessionID = route.params.sessionID;
     // TODO : remove in prod
     const sessionID = '1cc9cb0195ef807';
+    // const sessionID = '5c99c59025593b4';
     const [accounts, changeAccounts] = useState<Account[]>([]);
     const [transactionMap, changeTransactionMap] = useState<Map<number, Transaction[]>>(new Map());
 
@@ -108,7 +82,11 @@ export default function Homepage({ navigation, route }: { navigation:any, route:
     }
 
     useEffect(() => {
-        updateAccountDetails();
+        const screenChange = navigation.addListener('focus', () => {
+            updateAccountDetails();
+        })
+
+        return screenChange;
     }, [])
 
 
@@ -163,7 +141,7 @@ export default function Homepage({ navigation, route }: { navigation:any, route:
                 marginTop:15,
                 marginBottom:15,
             }}>
-                <AccountList accounts={accounts} dimensions={dimensions} noiseImage={assets.get('noise')} styles={styles} showLast={true} func={(i: any) => {
+                <AccountList accounts={accounts} dimensions={dimensions} noiseImage={assets.get('noise')} styles={styles} showCreation={true} func={(i: any) => {
                     let t = transactionMap.get(i.id);
                     changeActiveTransactions(t == undefined ? [] : t);
                 }} activeAccount={activeAccount} changeActiveAccount={changeActiveAccount} />
@@ -183,7 +161,6 @@ export default function Homepage({ navigation, route }: { navigation:any, route:
                     {
                         Array<[string, () => void]>(
                             ['send', () => {
-                                console.log('transfer');
                                 navigation.navigate('send', {
                                     sessionID: sessionID,
                                     accountID: activeAccount.id
