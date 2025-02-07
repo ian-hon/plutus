@@ -56,7 +56,7 @@ pub fn check(c: &HashMap<String, String>, t: Vec<(&str, PlutusFormat)>) -> Plutu
                                 return PlutusError::InvalidFormat
                             },
                             Ok(f) => {
-                                if f == std::f64::NAN {
+                                if f.is_nan() {
                                     return PlutusError::InvalidFormat
                                 }
                             }
