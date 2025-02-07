@@ -51,8 +51,15 @@ pub fn check(c: &HashMap<String, String>, t: Vec<(&str, PlutusFormat)>) -> Plutu
             Some(v) => {
                 match i.1 {
                     PlutusFormat::Float => {
-                        if v.parse::<f64>().is_err() {
-                            return PlutusError::InvalidFormat;
+                        match v.parse::<f64>() {
+                            Err(_) => {
+                                return PlutusError::InvalidFormat
+                            },
+                            Ok(f) => {
+                                if f == std::f64::NAN {
+                                    return PlutusError::InvalidFormat
+                                }
+                            }
                         }
                     },
                     PlutusFormat::Number => {
