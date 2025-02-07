@@ -39,7 +39,6 @@ export default function TransactionElement({ parent, t, fmt, incoming, outgoing 
             <Image source={isIncoming ? incoming : outgoing} style={{
                 width:15,
                 height:15,
-                marginLeft:10,
             }}/>
             <View style={{
                 marginLeft:20
@@ -76,7 +75,6 @@ export default function TransactionElement({ parent, t, fmt, incoming, outgoing 
                 justifyContent:'flex-end',
                 alignItems:'center',
                 flexDirection:'row',
-                marginRight:10
             }}>
                 <Text style={[styles.text, {
                     fontFamily:'NotoSans',

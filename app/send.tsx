@@ -1,6 +1,7 @@
 import { AccountElement, AccountList } from "@/components/AccountElement";
 import { Account } from "@/constants/account";
 import { BACKEND_ADDRESS } from "@/constants/backend";
+import { getValue } from "@/constants/outcome";
 import { styles, Theme } from "@/constants/theme";
 import { constructBody, repackDict, toID } from "@/constants/utils";
 import React, { useEffect, useState } from "react";
@@ -44,6 +45,12 @@ export default function Send({ navigation, route }: { navigation: any, route: an
         opacity: useAnimatedValue(0),
         padding: useAnimatedValue(0)
     }
+
+    const statusAnimations = {
+        opacity: useAnimatedValue(0)
+    }
+
+    const [statusMessage, changeStatusMessage] = useState('');
 
     function changeState(s: State) {
         _changeState(s);
@@ -110,7 +117,39 @@ export default function Send({ navigation, route }: { navigation: any, route: an
         .then(r => {
             if (r == 'Success') {
                 navigation.goBack();
+                return;
             }
+
+            let status = new Map([
+                ['InsufficientBalance', 'Insufficient balance'],
+                ['SurpassedLimit', 'Limit already surpassed'],
+                ['WillSurpassLimit', 'Limit will be surpassed']
+            ]).get(getValue(r));
+            changeStatusMessage(status ? status : 'Invalid');
+
+            Animated.sequence([
+                Animated.timing(
+                    statusAnimations.opacity,
+                    {
+                        toValue:1,
+                        duration:0,
+                        useNativeDriver:false
+                    }
+                ),
+                Animated.timing(
+                    statusAnimations.opacity,
+                    {
+                        toValue:0,
+                        duration:1500,
+                        useNativeDriver:false,
+                        easing:Easing.bezier(0.77, 0.0, 0.175, 1.0)
+                    }
+                ),
+            ]).start();
+
+            // InsufficientBalance
+            // SurpassedLimit,
+            // WillSurpassLimit
         })
     }
 
@@ -129,7 +168,7 @@ export default function Send({ navigation, route }: { navigation: any, route: an
             changeAllAccounts(a);
             changeSelectedAccount(a[0]);
         })
-    }, [balanceInputAnimations.height]);
+    }, []);
 
     return <View style={{
         backgroundColor:Theme.background,
@@ -138,7 +177,7 @@ export default function Send({ navigation, route }: { navigation: any, route: an
         paddingTop:safeAreaInsets.top,
         paddingRight:safeAreaInsets.right,
         paddingBottom:safeAreaInsets.bottom,
-        paddingLeft:safeAreaInsets.left
+        paddingLeft:safeAreaInsets.left,
     }}>
         <View style={{
             justifyContent:'center',
@@ -179,8 +218,9 @@ export default function Send({ navigation, route }: { navigation: any, route: an
         </View>
         <View style={{
             marginTop:20,
+            width:'100%',
             justifyContent:'center',
-            alignItems:'center'
+            alignItems:'center',
         }}>
             <Animated.View style={{
                 width:'60%',
@@ -193,58 +233,82 @@ export default function Send({ navigation, route }: { navigation: any, route: an
                 alignItems:'center',
                 borderRadius:Theme.borderRadius,
                 borderColor:`${Theme.accent}88`,
-                borderWidth:1.5
+                borderWidth:1.5,
             }}>
-                <Text style={[styles.smallText, {
-                    opacity:0.7,
-                    width:'100%',
-                }]}>
-                    enter amount :
-                </Text>
-                <View style={{
-                    width:'100%',
-                    justifyContent:'center',
-                    alignItems:'center',
-                    flexDirection:'row',
-                    overflow:'hidden',
-                    borderBottomColor:Theme.textTranslucent,
-                    borderBottomWidth:1.5,
-                }}>
-                    <Text style={[styles.mediumText, {
-                        fontFamily:'SpaceMono',
-                        textAlignVertical:'center',
-                        lineHeight:0
+                <View>
+                    <Text style={[styles.smallText, {
+                        opacity:0.7,
+                        width:'100%',
                     }]}>
-                        MYR
+                        enter amount :
                     </Text>
-                    <TextInput value={selectedBalance.toString()}
-                    style={[styles.mediumText, {
-                        fontFamily:'SpaceMono',
-                        flexGrow:1,
-                        flex:1,
-                        lineHeight:0,
-                        margin:0,
-                        padding:0,
-                        marginLeft:10,
-                        textAlignVertical:'center',
-                    }]}
-                    onChangeText={(e) => {
-                        let i = e.split('.');
-                        let result = '';
-                        i.forEach((n, index) => {
-                            result += n;
-                            if ((index == 0) && (i.length >= 2)) {
-                                result += '.';
+                    <View style={{
+                        width:'100%',
+                        justifyContent:'center',
+                        alignItems:'center',
+                        flexDirection:'row',
+                        overflow:'hidden',
+                        borderBottomColor:Theme.textTranslucent,
+                        borderBottomWidth:1.5,
+                    }}>
+                        <Text style={[styles.mediumText, {
+                            fontFamily:'SpaceMono',
+                            textAlignVertical:'center',
+                            lineHeight:0
+                        }]}>
+                            MYR
+                        </Text>
+                        <TextInput value={selectedBalance.toString()}
+                        style={[styles.mediumText, {
+                            fontFamily:'SpaceMono',
+                            flexGrow:1,
+                            flex:1,
+                            lineHeight:0,
+                            margin:0,
+                            padding:0,
+                            marginLeft:10,
+                            textAlignVertical:'center',
+                        }]}
+                        onChangeText={(e) => {
+                            let i = e.split('.');
+                            let result = '';
+                            i.forEach((n, index) => {
+                                result += n;
+                                if ((index == 0) && (i.length >= 2)) {
+                                    result += '.';
+                                }
+                            })
+
+                            if (result.split('.').length == 2) {
+                                result = `${result.split('.')[0]}.${result.split('.')[1].substring(0, 2)}`;
                             }
-                        })
 
-                        if (result.split('.').length == 2) {
-                            result = `${result.split('.')[0]}.${result.split('.')[1].substring(0, 2)}`;
-                        }
-
-                        changeSelectedBalance(result);
-                    }} keyboardType={'numeric'} returnKeyType={'done'}/>
+                            changeSelectedBalance(result);
+                        }} keyboardType={'numeric'} returnKeyType={'done'}/>
+                    </View>
                 </View>
+            </Animated.View>
+            <Animated.View style={{
+                width:'60%',
+                height:balanceInputAnimations.height,
+                backgroundColor:'red',
+                position:'absolute',
+                borderRadius:Theme.borderRadius,
+                overflow:'hidden',
+                justifyContent:'center',
+                alignItems:'center',
+                opacity:statusAnimations.opacity,
+                pointerEvents:'none'
+            }}>
+                <Text style={[styles.mediumText,{
+                    fontFamily:'SpaceMono',
+                    textAlign:'center',
+                    width:'80%',
+                    fontSize:18,
+                    lineHeight:20
+                }]}>
+                    {statusMessage}
+                </Text>
             </Animated.View>
         </View>
         <View style={{

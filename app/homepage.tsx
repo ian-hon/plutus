@@ -67,8 +67,6 @@ export default function Homepage({ navigation, route }: { navigation:any, route:
                     if (data == undefined) {
                         return;
                     }
-                    // request can be sent whilst in between swiping,
-                    // a's transactions might arrive when user is already viewing b
 
                     let c = JSON.parse(data).map((e: any) => parseTransaction(e));
 
@@ -220,6 +218,7 @@ export default function Homepage({ navigation, route }: { navigation:any, route:
                     </View>
                     <Pressable onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                        navigation.navigate('wip');
                     }} style={{
                         marginTop:10
                     }}>
